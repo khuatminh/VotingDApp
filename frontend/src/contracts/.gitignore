@@ -1,0 +1,5 @@
+# ABI JSON files are auto-synced from contracts/out by scripts/sync-abi.sh.
+# Only addresses.json is committed.
+*.json
+!addresses.json
+!.gitignore
