@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# Foundry artifacts (contracts/.gitignore covers the rest)
+**/cache/
+**/out/
+**/broadcast/
+!contracts/broadcast/.gitkeep
+
+# Frontend ABIs are auto-synced; only addresses.json is committed
+frontend/src/contracts/*.json
+!frontend/src/contracts/addresses.json

@@ -1,0 +1,18 @@
+{
+  "name": "voting-dapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Decentralized voting DApp (academic). Foundry + React/Vite monorepo.",
+  "scripts": {
+    "build:contracts": "cd contracts && forge build",
+    "test:contracts": "cd contracts && forge test -vv",
+    "sync-abi": "bash scripts/sync-abi.sh",
+    "dev": "bash scripts/dev.sh",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "install:all": "cd frontend && npm install"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
