@@ -55,7 +55,18 @@ contract Election is AccessControl {
     /// @notice Number of elections ever created. Also used as the next election id.
     uint256 public electionCount;
 
-    // TODO(Dev B): mapping(uint256 => ElectionData) private _elections;
+    mapping(uint256 => ElectionData) private _elections;
+
+    // ---------------------------------------------------------------------
+    // Internal helpers
+    // ---------------------------------------------------------------------
+
+    /// @dev Validates electionId and returns a storage pointer. Used by every
+    ///      function that reads or mutates an existing election.
+    function _election(uint256 id) private view returns (ElectionData storage e) {
+        if (id >= electionCount) revert ElectionNotFound();
+        e = _elections[id];
+    }
 
     // ---------------------------------------------------------------------
     // Events
@@ -71,7 +82,6 @@ contract Election is AccessControl {
     // Errors
     // ---------------------------------------------------------------------
 
-    error TODO();              // skeleton sentinel
     error NotAdmin();
     error ElectionNotFound();
     error ElectionNotOpen();
@@ -92,13 +102,13 @@ contract Election is AccessControl {
     /// @param registryAddress Deployed VoterRegistry address.
     /// @param initialAdmins   Seeded with DEFAULT_ADMIN_ROLE + ADMIN_ROLE. Must be non-empty.
     constructor(address registryAddress, address[] memory initialAdmins) {
-        // TODO(Dev B):
-        //   1. require registryAddress != address(0)
-        //   2. registry = IVoterRegistry(registryAddress);  // note: immutable, must set here
-        //   3. require initialAdmins.length > 0
-        //   4. for each admin: _grantRole(DEFAULT_ADMIN_ROLE, admin) and _grantRole(ADMIN_ROLE, admin)
+        require(registryAddress != address(0), "Election: zero registry");
         registry = IVoterRegistry(registryAddress);
-        initialAdmins;
+        if (initialAdmins.length == 0) revert NotAdmin();
+        for (uint256 i = 0; i < initialAdmins.length; i++) {
+            _grantRole(DEFAULT_ADMIN_ROLE, initialAdmins[i]);
+            _grantRole(ADMIN_ROLE, initialAdmins[i]);
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -108,16 +118,18 @@ contract Election is AccessControl {
     /// @notice Create a new election. Returns the new election id (also `electionCount - 1`).
     function createElection(string calldata name, string calldata description)
         external
-        /* onlyRole(ADMIN_ROLE) */
+        onlyRole(ADMIN_ROLE)
         returns (uint256 electionId)
     {
-        // TODO(Dev B):
-        //   - require bytes(name).length > 0 (EmptyName)
-        //   - electionId = electionCount++;
-        //   - init _elections[electionId] fields (id, name, description, creator=msg.sender, state=NotStarted)
-        //   - emit ElectionCreated
-        name; description;
-        revert TODO();
+        if (bytes(name).length == 0) revert EmptyName();
+        electionId = electionCount++;
+        ElectionData storage e = _elections[electionId];
+        e.id          = electionId;
+        e.name        = name;
+        e.description = description;
+        e.creator     = msg.sender;
+        e.state       = State.NotStarted;
+        emit ElectionCreated(electionId, msg.sender, name);
     }
 
     function addCandidate(
@@ -125,26 +137,29 @@ contract Election is AccessControl {
         string calldata name,
         string calldata description,
         string calldata imageUrl
-    ) external /* onlyRole(ADMIN_ROLE) */ returns (uint256 candidateId) {
-        // TODO(Dev B):
-        //   - require election exists and state == NotStarted
-        //   - require bytes(name).length > 0
-        //   - candidateId = e.candidateCount++;
-        //   - store Candidate, emit CandidateAdded
-        electionId; name; description; imageUrl;
-        revert TODO();
+    ) external onlyRole(ADMIN_ROLE) returns (uint256 candidateId) {
+        ElectionData storage e = _election(electionId);
+        if (e.state == State.Open)   revert ElectionAlreadyStarted();
+        if (e.state == State.Ended)  revert ElectionAlreadyEnded();
+        if (bytes(name).length == 0) revert EmptyName();
+        candidateId = e.candidateCount++;
+        e.candidates[candidateId] = Candidate(candidateId, name, description, imageUrl, 0);
+        emit CandidateAdded(electionId, candidateId, name);
     }
 
-    function startElection(uint256 electionId) external /* onlyRole(ADMIN_ROLE) */ {
-        // TODO(Dev B): require state == NotStarted; require candidateCount > 0 (NoCandidates); set Open; emit.
-        electionId;
-        revert TODO();
+    function startElection(uint256 electionId) external onlyRole(ADMIN_ROLE) {
+        ElectionData storage e = _election(electionId);
+        if (e.state != State.NotStarted) revert ElectionAlreadyStarted();
+        if (e.candidateCount == 0)       revert NoCandidates();
+        e.state = State.Open;
+        emit ElectionStarted(electionId);
     }
 
-    function endElection(uint256 electionId) external /* onlyRole(ADMIN_ROLE) */ {
-        // TODO(Dev B): require state == Open; set Ended; emit.
-        electionId;
-        revert TODO();
+    function endElection(uint256 electionId) external onlyRole(ADMIN_ROLE) {
+        ElectionData storage e = _election(electionId);
+        if (e.state != State.Open) revert ElectionNotOpen();
+        e.state = State.Ended;
+        emit ElectionEnded(electionId);
     }
 
     // ---------------------------------------------------------------------
@@ -152,17 +167,15 @@ contract Election is AccessControl {
     // ---------------------------------------------------------------------
 
     function vote(uint256 electionId, uint256 candidateId) external {
-        // TODO(Dev B):
-        //   - require election exists and state == Open (ElectionNotOpen)
-        //   - require registry.isAuthorized(electionId, msg.sender) (VoterNotAuthorized)
-        //   - require !e.hasVoted[msg.sender] (AlreadyVoted)
-        //   - require candidateId < e.candidateCount (CandidateNotFound)
-        //   - e.hasVoted[msg.sender] = true;
-        //   - e.candidates[candidateId].voteCount++;
-        //   - e.totalVotes++;
-        //   - emit VoteCast
-        electionId; candidateId;
-        revert TODO();
+        ElectionData storage e = _election(electionId);
+        if (e.state != State.Open)                           revert ElectionNotOpen();
+        if (!registry.isAuthorized(electionId, msg.sender))  revert VoterNotAuthorized();
+        if (e.hasVoted[msg.sender])                          revert AlreadyVoted();
+        if (candidateId >= e.candidateCount)                 revert CandidateNotFound();
+        e.hasVoted[msg.sender] = true;
+        e.candidates[candidateId].voteCount++;
+        e.totalVotes++;
+        emit VoteCast(electionId, candidateId, msg.sender);
     }
 
     // ---------------------------------------------------------------------
@@ -182,9 +195,8 @@ contract Election is AccessControl {
             uint256 totalVotes
         )
     {
-        // TODO(Dev B): destructure _elections[electionId]; revert ElectionNotFound if id >= electionCount.
-        electionId;
-        return (0, "", "", address(0), State.NotStarted, 0, 0);
+        ElectionData storage e = _election(electionId);
+        return (e.id, e.name, e.description, e.creator, e.state, e.candidateCount, e.totalVotes);
     }
 
     function getCandidate(uint256 electionId, uint256 candidateId)
@@ -192,35 +204,42 @@ contract Election is AccessControl {
         view
         returns (Candidate memory)
     {
-        // TODO(Dev B): bounds-check, return e.candidates[candidateId].
-        electionId; candidateId;
-        return Candidate(0, "", "", "", 0);
+        ElectionData storage e = _election(electionId);
+        if (candidateId >= e.candidateCount) revert CandidateNotFound();
+        return e.candidates[candidateId];
     }
 
     function getCandidateCount(uint256 electionId) external view returns (uint256) {
-        // TODO(Dev B): bounds-check, return e.candidateCount.
-        electionId;
-        return 0;
+        return _election(electionId).candidateCount;
     }
 
     function getResults(uint256 electionId) external view returns (Candidate[] memory) {
-        // TODO(Dev B): return all candidates for the election.
-        electionId;
-        return new Candidate[](0);
+        ElectionData storage e = _election(electionId);
+        Candidate[] memory result = new Candidate[](e.candidateCount);
+        for (uint256 i = 0; i < e.candidateCount; i++) {
+            result[i] = e.candidates[i];
+        }
+        return result;
     }
 
     /// @notice Winner is the candidate with the highest voteCount. Ties broken by lowest candidateId.
     /// @dev Reverts ElectionNotEnded if state != Ended; reverts NoVotesCast if totalVotes == 0.
     function getWinner(uint256 electionId) external view returns (Candidate memory) {
-        // TODO(Dev B): enforce state & totalVotes checks, then linear scan with tiebreak = lowest id.
-        electionId;
-        return Candidate(0, "", "", "", 0);
+        ElectionData storage e = _election(electionId);
+        if (e.state != State.Ended) revert ElectionNotEnded();
+        if (e.totalVotes == 0)      revert NoVotesCast();
+        Candidate memory winner = e.candidates[0];
+        for (uint256 i = 1; i < e.candidateCount; i++) {
+            // strictly greater — ties keep the first (lowest id) candidate
+            if (e.candidates[i].voteCount > winner.voteCount) {
+                winner = e.candidates[i];
+            }
+        }
+        return winner;
     }
 
     /// @notice Returns true if `account` holds ADMIN_ROLE.
     function isAdmin(address account) external view returns (bool) {
-        // TODO(Dev B): return hasRole(ADMIN_ROLE, account);
-        account;
-        return false;
+        return hasRole(ADMIN_ROLE, account);
     }
 }
