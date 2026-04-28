@@ -10,26 +10,26 @@ import {Election}      from "../src/Election.sol";
 /// @dev SKELETON. Parses PRIVATE_KEY + optional SEED_ADMINS env vars. Spec §4.4.
 contract Deploy is Script {
     function run() external returns (VoterRegistry registry, Election election) {
-        // TODO(Dev B):
-        //   1. uint256 pk = vm.envUint("PRIVATE_KEY");
-        //   2. address deployer = vm.addr(pk);
-        //   3. address[] memory admins = _parseSeedAdmins(deployer);
-        //   4. vm.startBroadcast(pk);
-        //        registry = new VoterRegistry(admins);
-        //        election = new Election(address(registry), admins);
-        //      vm.stopBroadcast();
-        //   5. console2.log("VoterRegistry:", address(registry));
-        //   6. console2.log("Election:",      address(election));
-        return (VoterRegistry(address(0)), Election(address(0)));
+        uint256 pk       = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.addr(pk);
+        address[] memory admins = _parseSeedAdmins(deployer);
+
+        vm.startBroadcast(pk);
+        registry = new VoterRegistry(admins);
+        election  = new Election(address(registry), admins);
+        vm.stopBroadcast();
+
+        console2.log("VoterRegistry:", address(registry));
+        console2.log("Election:     ", address(election));
     }
 
     /// @dev Parses `SEED_ADMINS` (comma-separated). Falls back to [deployer] if unset/empty.
-    function _parseSeedAdmins(address deployer) internal view returns (address[] memory admins) {
-        // TODO(Dev B):
-        //   - try vm.envString("SEED_ADMINS"); on empty/not-set -> return [deployer]
-        //   - split on ","; parse each with vm.parseAddress; trim whitespace
-        //   - return the resulting array
-        deployer;
-        admins = new address[](0);
+    function _parseSeedAdmins(address deployer) internal view returns (address[] memory) {
+        try vm.envAddress("SEED_ADMINS", ",") returns (address[] memory parsed) {
+            if (parsed.length > 0) return parsed;
+        } catch {}
+        address[] memory fallback_ = new address[](1);
+        fallback_[0] = deployer;
+        return fallback_;
     }
 }
