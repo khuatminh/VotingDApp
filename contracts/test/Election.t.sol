@@ -227,11 +227,78 @@ contract ElectionTest is Test {
 
     // ----- vote ----------------------------------------------------------
 
-    function test_vote_happyPath()                        public { /* TODO(Dev B): increments counts, emits event */ }
-    function test_vote_revertsWhenNotOpen()               public { /* TODO(Dev B) */ }
-    function test_vote_revertsWhenNotAuthorized()         public { /* TODO(Dev B) */ }
-    function test_vote_revertsWhenAlreadyVoted()          public { /* TODO(Dev B) */ }
-    function test_vote_revertsOnUnknownCandidate()        public { /* TODO(Dev B) */ }
+    function test_vote_happyPath() public {
+        uint256 eid = _createWithCandidate();
+        registry.setAuthorized(eid, voter1, true);
+        vm.prank(admin);
+        election.startElection(eid);
+
+        vm.prank(voter1);
+        vm.expectEmit(true, true, true, false);
+        emit Election.VoteCast(eid, 0, voter1);
+        election.vote(eid, 0);
+
+        Election.Candidate memory c = election.getCandidate(eid, 0);
+        assertEq(c.voteCount, 1);
+        (, , , , , , uint256 totalVotes) = election.getElection(eid);
+        assertEq(totalVotes, 1);
+    }
+
+    function test_vote_revertsWhenNotOpen() public {
+        uint256 eid = _createWithCandidate();
+        registry.setAuthorized(eid, voter1, true);
+
+        // Case 1: NotStarted
+        vm.prank(voter1);
+        vm.expectRevert(Election.ElectionNotOpen.selector);
+        election.vote(eid, 0);
+
+        // Case 2: Ended
+        vm.startPrank(admin);
+        election.startElection(eid);
+        election.endElection(eid);
+        vm.stopPrank();
+
+        vm.prank(voter1);
+        vm.expectRevert(Election.ElectionNotOpen.selector);
+        election.vote(eid, 0);
+    }
+
+    function test_vote_revertsWhenNotAuthorized() public {
+        uint256 eid = _createWithCandidate();
+        vm.prank(admin);
+        election.startElection(eid);
+
+        // voter1 is NOT authorized
+        vm.prank(voter1);
+        vm.expectRevert(Election.VoterNotAuthorized.selector);
+        election.vote(eid, 0);
+    }
+
+    function test_vote_revertsWhenAlreadyVoted() public {
+        uint256 eid = _createWithCandidate();
+        registry.setAuthorized(eid, voter1, true);
+        vm.prank(admin);
+        election.startElection(eid);
+
+        vm.prank(voter1);
+        election.vote(eid, 0);
+
+        vm.prank(voter1);
+        vm.expectRevert(Election.AlreadyVoted.selector);
+        election.vote(eid, 0);
+    }
+
+    function test_vote_revertsOnUnknownCandidate() public {
+        uint256 eid = _createWithCandidate();
+        registry.setAuthorized(eid, voter1, true);
+        vm.prank(admin);
+        election.startElection(eid);
+
+        vm.prank(voter1);
+        vm.expectRevert(Election.CandidateNotFound.selector);
+        election.vote(eid, 999);
+    }
 
     // ----- views ---------------------------------------------------------
 

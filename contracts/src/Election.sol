@@ -168,17 +168,15 @@ contract Election is AccessControl {
     // ---------------------------------------------------------------------
 
     function vote(uint256 electionId, uint256 candidateId) external {
-        // TODO(Dev B):
-        //   - require election exists and state == Open (ElectionNotOpen)
-        //   - require registry.isAuthorized(electionId, msg.sender) (VoterNotAuthorized)
-        //   - require !e.hasVoted[msg.sender] (AlreadyVoted)
-        //   - require candidateId < e.candidateCount (CandidateNotFound)
-        //   - e.hasVoted[msg.sender] = true;
-        //   - e.candidates[candidateId].voteCount++;
-        //   - e.totalVotes++;
-        //   - emit VoteCast
-        electionId; candidateId;
-        revert TODO();
+        ElectionData storage e = _election(electionId);
+        if (e.state != State.Open)                           revert ElectionNotOpen();
+        if (!registry.isAuthorized(electionId, msg.sender))  revert VoterNotAuthorized();
+        if (e.hasVoted[msg.sender])                          revert AlreadyVoted();
+        if (candidateId >= e.candidateCount)                 revert CandidateNotFound();
+        e.hasVoted[msg.sender] = true;
+        e.candidates[candidateId].voteCount++;
+        e.totalVotes++;
+        emit VoteCast(electionId, candidateId, msg.sender);
     }
 
     // ---------------------------------------------------------------------
