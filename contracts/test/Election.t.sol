@@ -66,27 +66,164 @@ contract ElectionTest is Test {
         assertFalse(election.isAdmin(other));
     }
 
+    /// @dev Creates election 0 with one candidate ("Alice"). Both admin actions.
+    function _createWithCandidate() internal returns (uint256 electionId) {
+        vm.startPrank(admin);
+        electionId = election.createElection("E", "desc");
+        election.addCandidate(electionId, "Alice", "bio", "");
+        vm.stopPrank();
+    }
+
     // ----- createElection -----------------------------------------------
 
-    function test_createElection_happyPath()              public { /* TODO(Dev B): id, creator, state, event */ }
-    function test_createElection_revertsOnEmptyName()     public { /* TODO(Dev B) */ }
-    function test_createElection_revertsWhenNonAdmin()    public { /* TODO(Dev B) */ }
-    function test_createElection_incrementsElectionCount() public { /* TODO(Dev B) */ }
+    function test_createElection_happyPath() public {
+        vm.prank(admin);
+        vm.expectEmit(true, true, false, true);
+        emit Election.ElectionCreated(0, admin, "Test Election");
+        uint256 id = election.createElection("Test Election", "A description");
+
+        assertEq(id, 0);
+        (
+            uint256 eid,
+            string memory name,
+            string memory desc,
+            address creator,
+            Election.State state,
+            uint256 cc,
+            uint256 tv
+        ) = election.getElection(0);
+        assertEq(eid, 0);
+        assertEq(name, "Test Election");
+        assertEq(desc, "A description");
+        assertEq(creator, admin);
+        assertTrue(state == Election.State.NotStarted);
+        assertEq(cc, 0);
+        assertEq(tv, 0);
+    }
+
+    function test_createElection_revertsOnEmptyName() public {
+        vm.prank(admin);
+        vm.expectRevert(Election.EmptyName.selector);
+        election.createElection("", "desc");
+    }
+
+    function test_createElection_revertsWhenNonAdmin() public {
+        vm.prank(other);
+        vm.expectRevert();
+        election.createElection("E", "desc");
+    }
+
+    function test_createElection_incrementsElectionCount() public {
+        vm.startPrank(admin);
+        election.createElection("E1", "d");
+        election.createElection("E2", "d");
+        vm.stopPrank();
+        assertEq(election.electionCount(), 2);
+    }
 
     // ----- addCandidate --------------------------------------------------
 
-    function test_addCandidate_happyPath()                public { /* TODO(Dev B) */ }
-    function test_addCandidate_revertsWhenStarted()       public { /* TODO(Dev B) */ }
-    function test_addCandidate_revertsWhenNonAdmin()      public { /* TODO(Dev B) */ }
-    function test_addCandidate_revertsOnEmptyName()       public { /* TODO(Dev B) */ }
+    function test_addCandidate_happyPath() public {
+        vm.prank(admin);
+        election.createElection("E", "desc");
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, false, true);
+        emit Election.CandidateAdded(0, 0, "Alice");
+        uint256 candidateId = election.addCandidate(0, "Alice", "bio", "http://img.com/alice.jpg");
+
+        assertEq(candidateId, 0);
+        Election.Candidate memory c = election.getCandidate(0, 0);
+        assertEq(c.id, 0);
+        assertEq(c.name, "Alice");
+        assertEq(c.description, "bio");
+        assertEq(c.imageUrl, "http://img.com/alice.jpg");
+        assertEq(c.voteCount, 0);
+    }
+
+    function test_addCandidate_revertsWhenStarted() public {
+        uint256 eid = _createWithCandidate();
+        vm.prank(admin);
+        election.startElection(eid);
+
+        vm.prank(admin);
+        vm.expectRevert(Election.ElectionAlreadyStarted.selector);
+        election.addCandidate(eid, "Bob", "bio", "");
+    }
+
+    function test_addCandidate_revertsWhenNonAdmin() public {
+        vm.prank(admin);
+        election.createElection("E", "desc");
+
+        vm.prank(other);
+        vm.expectRevert();
+        election.addCandidate(0, "Alice", "bio", "");
+    }
+
+    function test_addCandidate_revertsOnEmptyName() public {
+        vm.prank(admin);
+        election.createElection("E", "desc");
+
+        vm.prank(admin);
+        vm.expectRevert(Election.EmptyName.selector);
+        election.addCandidate(0, "", "bio", "");
+    }
 
     // ----- lifecycle -----------------------------------------------------
 
-    function test_startElection_happyPath()               public { /* TODO(Dev B) */ }
-    function test_startElection_revertsWithoutCandidates() public { /* TODO(Dev B): NoCandidates */ }
-    function test_startElection_revertsWhenAlreadyStarted() public { /* TODO(Dev B) */ }
-    function test_endElection_happyPath()                 public { /* TODO(Dev B) */ }
-    function test_endElection_revertsWhenNotOpen()        public { /* TODO(Dev B) */ }
+    function test_startElection_happyPath() public {
+        uint256 eid = _createWithCandidate();
+
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit Election.ElectionStarted(eid);
+        election.startElection(eid);
+
+        (, , , , Election.State state, , ) = election.getElection(eid);
+        assertTrue(state == Election.State.Open);
+    }
+
+    function test_startElection_revertsWithoutCandidates() public {
+        vm.prank(admin);
+        election.createElection("E", "desc");
+
+        vm.prank(admin);
+        vm.expectRevert(Election.NoCandidates.selector);
+        election.startElection(0);
+    }
+
+    function test_startElection_revertsWhenAlreadyStarted() public {
+        uint256 eid = _createWithCandidate();
+        vm.prank(admin);
+        election.startElection(eid);
+
+        vm.prank(admin);
+        vm.expectRevert(Election.ElectionAlreadyStarted.selector);
+        election.startElection(eid);
+    }
+
+    function test_endElection_happyPath() public {
+        uint256 eid = _createWithCandidate();
+        vm.prank(admin);
+        election.startElection(eid);
+
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit Election.ElectionEnded(eid);
+        election.endElection(eid);
+
+        (, , , , Election.State state, , ) = election.getElection(eid);
+        assertTrue(state == Election.State.Ended);
+    }
+
+    function test_endElection_revertsWhenNotOpen() public {
+        vm.prank(admin);
+        election.createElection("E", "desc");
+
+        vm.prank(admin);
+        vm.expectRevert(Election.ElectionNotOpen.selector);
+        election.endElection(0);
+    }
 
     // ----- vote ----------------------------------------------------------
 
