@@ -45,10 +45,26 @@ contract ElectionTest is Test {
 
     // ----- constructor ---------------------------------------------------
 
-    function test_constructor_setsRegistryImmutable()     public { /* TODO(Dev B) */ }
-    function test_constructor_revertsOnZeroRegistry()     public { /* TODO(Dev B) */ }
-    function test_constructor_revertsOnEmptyAdminList()   public { /* TODO(Dev B) */ }
-    function test_constructor_grantsRolesToSeedAdmins()   public { /* TODO(Dev B) */ }
+    function test_constructor_setsRegistryImmutable() public {
+        assertEq(address(election.registry()), address(registry));
+    }
+
+    function test_constructor_revertsOnZeroRegistry() public {
+        address[] memory admins = new address[](1);
+        admins[0] = admin;
+        vm.expectRevert("Election: zero registry");
+        new Election(address(0), admins);
+    }
+
+    function test_constructor_revertsOnEmptyAdminList() public {
+        vm.expectRevert(Election.NotAdmin.selector);
+        new Election(address(registry), new address[](0));
+    }
+
+    function test_constructor_grantsRolesToSeedAdmins() public {
+        assertTrue(election.isAdmin(admin));
+        assertFalse(election.isAdmin(other));
+    }
 
     // ----- createElection -----------------------------------------------
 

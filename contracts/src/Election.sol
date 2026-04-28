@@ -55,7 +55,18 @@ contract Election is AccessControl {
     /// @notice Number of elections ever created. Also used as the next election id.
     uint256 public electionCount;
 
-    // TODO(Dev B): mapping(uint256 => ElectionData) private _elections;
+    mapping(uint256 => ElectionData) private _elections;
+
+    // ---------------------------------------------------------------------
+    // Internal helpers
+    // ---------------------------------------------------------------------
+
+    /// @dev Validates electionId and returns a storage pointer. Used by every
+    ///      function that reads or mutates an existing election.
+    function _election(uint256 id) private view returns (ElectionData storage e) {
+        if (id >= electionCount) revert ElectionNotFound();
+        e = _elections[id];
+    }
 
     // ---------------------------------------------------------------------
     // Events
@@ -92,13 +103,13 @@ contract Election is AccessControl {
     /// @param registryAddress Deployed VoterRegistry address.
     /// @param initialAdmins   Seeded with DEFAULT_ADMIN_ROLE + ADMIN_ROLE. Must be non-empty.
     constructor(address registryAddress, address[] memory initialAdmins) {
-        // TODO(Dev B):
-        //   1. require registryAddress != address(0)
-        //   2. registry = IVoterRegistry(registryAddress);  // note: immutable, must set here
-        //   3. require initialAdmins.length > 0
-        //   4. for each admin: _grantRole(DEFAULT_ADMIN_ROLE, admin) and _grantRole(ADMIN_ROLE, admin)
+        require(registryAddress != address(0), "Election: zero registry");
         registry = IVoterRegistry(registryAddress);
-        initialAdmins;
+        if (initialAdmins.length == 0) revert NotAdmin();
+        for (uint256 i = 0; i < initialAdmins.length; i++) {
+            _grantRole(DEFAULT_ADMIN_ROLE, initialAdmins[i]);
+            _grantRole(ADMIN_ROLE, initialAdmins[i]);
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -219,8 +230,6 @@ contract Election is AccessControl {
 
     /// @notice Returns true if `account` holds ADMIN_ROLE.
     function isAdmin(address account) external view returns (bool) {
-        // TODO(Dev B): return hasRole(ADMIN_ROLE, account);
-        account;
-        return false;
+        return hasRole(ADMIN_ROLE, account);
     }
 }
