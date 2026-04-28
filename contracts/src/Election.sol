@@ -9,8 +9,7 @@ import {IVoterRegistry} from "./interfaces/IVoterRegistry.sol";
 /// @notice Manages multiple concurrent elections with richer candidates and per-election
 ///         voter authorization (delegated to IVoterRegistry). Symmetric admins; creator
 ///         tracked for auditing only ("Model 3" — see spec §3.4).
-/// @dev SKELETON. All mutating bodies revert `TODO()`; all views return zero/empty.
-///      Spec: docs/superpowers/specs/2026-04-25-voting-dapp-design.md §4.3
+/// @dev Spec: docs/superpowers/specs/2026-04-25-voting-dapp-design.md §4.3
 contract Election is AccessControl {
     // ---------------------------------------------------------------------
     // Roles
