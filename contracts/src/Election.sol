@@ -82,7 +82,6 @@ contract Election is AccessControl {
     // Errors
     // ---------------------------------------------------------------------
 
-    error TODO();              // skeleton sentinel
     error NotAdmin();
     error ElectionNotFound();
     error ElectionNotOpen();
@@ -215,17 +214,28 @@ contract Election is AccessControl {
     }
 
     function getResults(uint256 electionId) external view returns (Candidate[] memory) {
-        // TODO(Dev B): return all candidates for the election.
-        electionId;
-        return new Candidate[](0);
+        ElectionData storage e = _election(electionId);
+        Candidate[] memory result = new Candidate[](e.candidateCount);
+        for (uint256 i = 0; i < e.candidateCount; i++) {
+            result[i] = e.candidates[i];
+        }
+        return result;
     }
 
     /// @notice Winner is the candidate with the highest voteCount. Ties broken by lowest candidateId.
     /// @dev Reverts ElectionNotEnded if state != Ended; reverts NoVotesCast if totalVotes == 0.
     function getWinner(uint256 electionId) external view returns (Candidate memory) {
-        // TODO(Dev B): enforce state & totalVotes checks, then linear scan with tiebreak = lowest id.
-        electionId;
-        return Candidate(0, "", "", "", 0);
+        ElectionData storage e = _election(electionId);
+        if (e.state != State.Ended) revert ElectionNotEnded();
+        if (e.totalVotes == 0)      revert NoVotesCast();
+        Candidate memory winner = e.candidates[0];
+        for (uint256 i = 1; i < e.candidateCount; i++) {
+            // strictly greater — ties keep the first (lowest id) candidate
+            if (e.candidates[i].voteCount > winner.voteCount) {
+                winner = e.candidates[i];
+            }
+        }
+        return winner;
     }
 
     /// @notice Returns true if `account` holds ADMIN_ROLE.

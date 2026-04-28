@@ -302,12 +302,87 @@ contract ElectionTest is Test {
 
     // ----- views ---------------------------------------------------------
 
-    function test_getResults_returnsAllCandidates()       public { /* TODO(Dev B) */ }
-    function test_getWinner_revertsWhenNotEnded()         public { /* TODO(Dev B): ElectionNotEnded */ }
-    function test_getWinner_revertsOnNoVotes()            public { /* TODO(Dev B): NoVotesCast */ }
-    function test_getWinner_tiebreakByLowestId()          public { /* TODO(Dev B) */ }
+    function test_getResults_returnsAllCandidates() public {
+        vm.startPrank(admin);
+        election.createElection("E", "desc");
+        election.addCandidate(0, "Alice", "bio1", "http://a.com/a.jpg");
+        election.addCandidate(0, "Bob",   "bio2", "http://a.com/b.jpg");
+        vm.stopPrank();
+
+        Election.Candidate[] memory results = election.getResults(0);
+        assertEq(results.length, 2);
+        assertEq(results[0].name, "Alice");
+        assertEq(results[1].name, "Bob");
+        assertEq(results[0].id, 0);
+        assertEq(results[1].id, 1);
+    }
+
+    function test_getWinner_revertsWhenNotEnded() public {
+        uint256 eid = _createWithCandidate();
+        vm.prank(admin);
+        election.startElection(eid);
+
+        vm.expectRevert(Election.ElectionNotEnded.selector);
+        election.getWinner(eid);
+    }
+
+    function test_getWinner_revertsOnNoVotes() public {
+        uint256 eid = _createWithCandidate();
+        vm.startPrank(admin);
+        election.startElection(eid);
+        election.endElection(eid);
+        vm.stopPrank();
+
+        vm.expectRevert(Election.NoVotesCast.selector);
+        election.getWinner(eid);
+    }
+
+    function test_getWinner_tiebreakByLowestId() public {
+        vm.startPrank(admin);
+        uint256 eid = election.createElection("E", "desc");
+        election.addCandidate(eid, "Alice", "", "");  // id = 0
+        election.addCandidate(eid, "Bob",   "", "");  // id = 1
+        election.startElection(eid);
+        vm.stopPrank();
+
+        registry.setAuthorized(eid, voter1, true);
+        registry.setAuthorized(eid, voter2, true);
+
+        vm.prank(voter1);
+        election.vote(eid, 0);   // Alice: 1 vote
+        vm.prank(voter2);
+        election.vote(eid, 1);   // Bob: 1 vote — tie
+
+        vm.prank(admin);
+        election.endElection(eid);
+
+        Election.Candidate memory winner = election.getWinner(eid);
+        assertEq(winner.id,   0);
+        assertEq(winner.name, "Alice");
+    }
 
     // ----- concurrent elections -----------------------------------------
 
-    function test_multipleElections_isolatedState()       public { /* TODO(Dev B): vote in 0 ≠ vote in 1 */ }
+    function test_multipleElections_isolatedState() public {
+        vm.startPrank(admin);
+        uint256 eid0 = election.createElection("E0", "d");
+        election.addCandidate(eid0, "Alice",   "", "");
+        election.startElection(eid0);
+
+        uint256 eid1 = election.createElection("E1", "d");
+        election.addCandidate(eid1, "Charlie", "", "");
+        election.startElection(eid1);
+        vm.stopPrank();
+
+        registry.setAuthorized(eid0, voter1, true);
+        // voter1 is NOT authorized for eid1
+
+        vm.prank(voter1);
+        election.vote(eid0, 0);
+
+        (, , , , , , uint256 tv0) = election.getElection(eid0);
+        (, , , , , , uint256 tv1) = election.getElection(eid1);
+        assertEq(tv0, 1);
+        assertEq(tv1, 0);
+    }
 }
