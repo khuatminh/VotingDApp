@@ -22,8 +22,7 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     // Storage
     // ---------------------------------------------------------------------
 
-    // TODO(Dev A): (electionId => (voter => authorized?))
-    // mapping(uint256 => mapping(address => bool)) private _authorized;
+    mapping(uint256 => mapping(address => bool)) private _authorized;
 
     // ---------------------------------------------------------------------
     // Skeleton sentinel
@@ -39,13 +38,12 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     /// @param initialAdmins Addresses seeded with DEFAULT_ADMIN_ROLE + ADMIN_ROLE.
     ///        Must be non-empty; every element must be non-zero. See spec §4.2.
     constructor(address[] memory initialAdmins) {
-        // TODO(Dev A):
-        //   1. require initialAdmins.length > 0
-        //   2. for each admin:
-        //      - revert ZeroAddress() if admin == address(0)
-        //      - _grantRole(DEFAULT_ADMIN_ROLE, admin)
-        //      - _grantRole(ADMIN_ROLE, admin)
-        initialAdmins; // silence unused-var warning in skeleton
+        if (initialAdmins.length == 0) revert NotAdmin();
+        for (uint256 i = 0; i < initialAdmins.length; i++) {
+            if (initialAdmins[i] == address(0)) revert ZeroAddress();
+            _grantRole(DEFAULT_ADMIN_ROLE, initialAdmins[i]);
+            _grantRole(ADMIN_ROLE, initialAdmins[i]);
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -105,8 +103,6 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     /// @notice Returns true if `account` currently holds ADMIN_ROLE.
     /// @dev Thin wrapper over AccessControl.hasRole so the frontend can call one well-named view.
     function isAdmin(address account) external view returns (bool) {
-        // TODO(Dev A): return hasRole(ADMIN_ROLE, account);
-        account;
-        return false;
+        return hasRole(ADMIN_ROLE, account);
     }
 }

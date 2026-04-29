@@ -26,9 +26,21 @@ contract VoterRegistryTest is Test {
 
     // ----- constructor ---------------------------------------------------
 
-    function test_constructor_revertsOnEmptyAdminList() public { /* TODO(Dev A) */ }
-    function test_constructor_revertsOnZeroAdmin()     public { /* TODO(Dev A) */ }
-    function test_constructor_grantsRolesToSeedAdmins() public { /* TODO(Dev A) */ }
+    function test_constructor_revertsOnEmptyAdminList() public {
+        vm.expectRevert(IVoterRegistry.NotAdmin.selector);
+        new VoterRegistry(new address[](0));
+    }
+    function test_constructor_revertsOnZeroAdmin()     public {
+        address[] memory admins = new address[](2);
+        admins[0] = admin;
+        admins[1] = address(0);
+        vm.expectRevert(IVoterRegistry.ZeroAddress.selector);
+        new VoterRegistry(admins);
+    }
+    function test_constructor_grantsRolesToSeedAdmins() public {
+        assertTrue(registry.isAdmin(admin));
+        assertFalse(registry.isAdmin(other));
+    }
 
     // ----- authorizeVoter ------------------------------------------------
 
@@ -50,9 +62,25 @@ contract VoterRegistryTest is Test {
 
     // ----- role administration (inherited from AccessControl) ----------
 
-    function test_grantRole_byDefaultAdmin()          public { /* TODO(Dev A): new admin gains ADMIN_ROLE */ }
-    function test_revokeRole_byDefaultAdmin()         public { /* TODO(Dev A) */ }
-    function test_isAdmin_reflectsRoleState()         public { /* TODO(Dev A) */ }
+    function test_grantRole_byDefaultAdmin()          public {
+        bytes32 role = registry.ADMIN_ROLE();
+        vm.prank(admin);
+        registry.grantRole(role, other);
+        assertTrue(registry.isAdmin(other));
+    }
+    function test_revokeRole_byDefaultAdmin()         public {
+        bytes32 role = registry.ADMIN_ROLE();
+        vm.prank(admin);
+        registry.revokeRole(role, admin);
+        assertFalse(registry.isAdmin(admin));
+    }
+    function test_isAdmin_reflectsRoleState()         public {
+        assertFalse(registry.isAdmin(other));
+        bytes32 role = registry.ADMIN_ROLE();
+        vm.prank(admin);
+        registry.grantRole(role, other);
+        assertTrue(registry.isAdmin(other));
+    }
 
     // ----- per-election isolation ---------------------------------------
 
