@@ -5,9 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {VoterRegistry} from "../src/VoterRegistry.sol";
 import {IVoterRegistry} from "../src/interfaces/IVoterRegistry.sol";
 
-/// @title VoterRegistry unit tests (skeleton)
+/// @title VoterRegistry unit tests
 /// @author Dev A
-/// @dev Every `test_*` is a TODO. Fill bodies per spec §4.2 behaviors.
+/// @dev Full test suite for VoterRegistry.sol per spec §4.2.
 contract VoterRegistryTest is Test {
     VoterRegistry internal registry;
 
