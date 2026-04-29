@@ -100,6 +100,15 @@ contract VoterRegistryTest is Test {
         registry.revokeVoter(ELECTION_ID, voter);
     }
 
+    function test_revokeVoter_revertsWhenNonAdmin() public {
+        vm.prank(admin);
+        registry.authorizeVoter(ELECTION_ID, voter);
+
+        vm.prank(other);
+        vm.expectRevert();
+        registry.revokeVoter(ELECTION_ID, voter);
+    }
+
     // ----- authorizeVoters (batch) --------------------------------------
 
     function test_authorizeVoters_happyPath()         public { /* TODO(Dev A) */ }
