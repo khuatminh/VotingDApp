@@ -53,16 +53,12 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     /// @inheritdoc IVoterRegistry
     function authorizeVoter(uint256 electionId, address voter)
         external
-        /* onlyRole(ADMIN_ROLE) */
+        onlyRole(ADMIN_ROLE)
     {
-        // TODO(Dev A):
-        //   - require msg.sender has ADMIN_ROLE (use onlyRole or revert NotAdmin)
-        //   - require voter != address(0) (ZeroAddress)
-        //   - require !_authorized[electionId][voter] (AlreadyAuthorized)
-        //   - set _authorized[electionId][voter] = true
-        //   - emit VoterAuthorized(electionId, voter, msg.sender)
-        electionId; voter;
-        revert TODO();
+        if (voter == address(0)) revert ZeroAddress();
+        if (_authorized[electionId][voter]) revert AlreadyAuthorized();
+        _authorized[electionId][voter] = true;
+        emit VoterAuthorized(electionId, voter, msg.sender);
     }
 
     /// @inheritdoc IVoterRegistry
@@ -91,9 +87,7 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
 
     /// @inheritdoc IVoterRegistry
     function isAuthorized(uint256 electionId, address voter) external view returns (bool) {
-        // TODO(Dev A): return _authorized[electionId][voter];
-        electionId; voter;
-        return false;
+        return _authorized[electionId][voter];
     }
 
     // ---------------------------------------------------------------------

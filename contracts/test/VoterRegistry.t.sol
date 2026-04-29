@@ -51,10 +51,34 @@ contract VoterRegistryTest is Test {
 
     // ----- authorizeVoter ------------------------------------------------
 
-    function test_authorizeVoter_happyPath()           public { /* TODO(Dev A): admin calls, isAuthorized true, event */ }
-    function test_authorizeVoter_revertsWhenNonAdmin() public { /* TODO(Dev A) */ }
-    function test_authorizeVoter_revertsOnZeroAddress() public { /* TODO(Dev A) */ }
-    function test_authorizeVoter_revertsWhenAlreadyAuthorized() public { /* TODO(Dev A) */ }
+    function test_authorizeVoter_happyPath() public {
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, false);
+        emit IVoterRegistry.VoterAuthorized(ELECTION_ID, voter, admin);
+        registry.authorizeVoter(ELECTION_ID, voter);
+        assertTrue(registry.isAuthorized(ELECTION_ID, voter));
+    }
+
+    function test_authorizeVoter_revertsWhenNonAdmin() public {
+        vm.prank(other);
+        vm.expectRevert();
+        registry.authorizeVoter(ELECTION_ID, voter);
+    }
+
+    function test_authorizeVoter_revertsOnZeroAddress() public {
+        vm.prank(admin);
+        vm.expectRevert(IVoterRegistry.ZeroAddress.selector);
+        registry.authorizeVoter(ELECTION_ID, address(0));
+    }
+
+    function test_authorizeVoter_revertsWhenAlreadyAuthorized() public {
+        vm.prank(admin);
+        registry.authorizeVoter(ELECTION_ID, voter);
+
+        vm.prank(admin);
+        vm.expectRevert(IVoterRegistry.AlreadyAuthorized.selector);
+        registry.authorizeVoter(ELECTION_ID, voter);
+    }
 
     // ----- revokeVoter ---------------------------------------------------
 
