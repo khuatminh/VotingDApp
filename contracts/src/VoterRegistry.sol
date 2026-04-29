@@ -7,7 +7,7 @@ import {IVoterRegistry} from "./interfaces/IVoterRegistry.sol";
 /// @title VoterRegistry
 /// @author Dev A
 /// @notice Per-election voter authorization, guarded by role-based access control.
-/// @dev SKELETON. Every function body either reverts `TODO()` or returns a zero value.
+/// @dev Partially implemented. `revokeVoter` and `authorizeVoters` still revert `TODO()`.
 ///      Spec: docs/superpowers/specs/2026-04-25-voting-dapp-design.md §4.2
 contract VoterRegistry is IVoterRegistry, AccessControl {
     // ---------------------------------------------------------------------
