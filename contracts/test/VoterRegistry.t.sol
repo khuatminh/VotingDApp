@@ -18,7 +18,6 @@ contract VoterRegistryTest is Test {
     uint256 internal constant ELECTION_ID = 0;
 
     function setUp() public {
-        // TODO(Dev A): deploy VoterRegistry with `admin` as sole initial admin.
         address[] memory admins = new address[](1);
         admins[0] = admin;
         registry = new VoterRegistry(admins);
@@ -31,15 +30,23 @@ contract VoterRegistryTest is Test {
         new VoterRegistry(new address[](0));
     }
     function test_constructor_revertsOnZeroAdmin()     public {
+        // zero at index 1
         address[] memory admins = new address[](2);
         admins[0] = admin;
         admins[1] = address(0);
         vm.expectRevert(IVoterRegistry.ZeroAddress.selector);
         new VoterRegistry(admins);
+
+        // zero at index 0
+        address[] memory admins2 = new address[](1);
+        admins2[0] = address(0);
+        vm.expectRevert(IVoterRegistry.ZeroAddress.selector);
+        new VoterRegistry(admins2);
     }
     function test_constructor_grantsRolesToSeedAdmins() public {
         assertTrue(registry.isAdmin(admin));
         assertFalse(registry.isAdmin(other));
+        assertTrue(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), admin));
     }
 
     // ----- authorizeVoter ------------------------------------------------
