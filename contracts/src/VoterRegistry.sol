@@ -7,7 +7,7 @@ import {IVoterRegistry} from "./interfaces/IVoterRegistry.sol";
 /// @title VoterRegistry
 /// @author Dev A
 /// @notice Per-election voter authorization, guarded by role-based access control.
-/// @dev Partially implemented. `authorizeVoters` still reverts `TODO()`.
+/// @dev Fully implemented.
 ///      Spec: docs/superpowers/specs/2026-04-25-voting-dapp-design.md §4.2
 contract VoterRegistry is IVoterRegistry, AccessControl {
     // ---------------------------------------------------------------------
@@ -23,13 +23,6 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     // ---------------------------------------------------------------------
 
     mapping(uint256 => mapping(address => bool)) private _authorized;
-
-    // ---------------------------------------------------------------------
-    // Skeleton sentinel
-    // ---------------------------------------------------------------------
-
-    /// @dev Placeholder error used by unimplemented skeletons. Remove when filling in.
-    error TODO();
 
     // ---------------------------------------------------------------------
     // Constructor
@@ -74,11 +67,14 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     /// @inheritdoc IVoterRegistry
     function authorizeVoters(uint256 electionId, address[] calldata voters)
         external
-        /* onlyRole(ADMIN_ROLE) */
+        onlyRole(ADMIN_ROLE)
     {
-        // TODO(Dev A): loop over voters; revert on first ZeroAddress or AlreadyAuthorized.
-        electionId; voters;
-        revert TODO();
+        for (uint256 i = 0; i < voters.length; i++) {
+            if (voters[i] == address(0)) revert ZeroAddress();
+            if (_authorized[electionId][voters[i]]) revert AlreadyAuthorized();
+            _authorized[electionId][voters[i]] = true;
+            emit VoterAuthorized(electionId, voters[i], msg.sender);
+        }
     }
 
     // ---------------------------------------------------------------------

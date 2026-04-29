@@ -111,9 +111,38 @@ contract VoterRegistryTest is Test {
 
     // ----- authorizeVoters (batch) --------------------------------------
 
-    function test_authorizeVoters_happyPath()         public { /* TODO(Dev A) */ }
-    function test_authorizeVoters_revertsOnFirstZeroAddress()    public { /* TODO(Dev A) */ }
-    function test_authorizeVoters_revertsOnFirstDuplicate()      public { /* TODO(Dev A) */ }
+    function test_authorizeVoters_happyPath() public {
+        address voter2 = makeAddr("voter2");
+        address[] memory voters = new address[](2);
+        voters[0] = voter;
+        voters[1] = voter2;
+
+        vm.prank(admin);
+        registry.authorizeVoters(ELECTION_ID, voters);
+
+        assertTrue(registry.isAuthorized(ELECTION_ID, voter));
+        assertTrue(registry.isAuthorized(ELECTION_ID, voter2));
+    }
+
+    function test_authorizeVoters_revertsOnFirstZeroAddress() public {
+        address[] memory voters = new address[](2);
+        voters[0] = voter;
+        voters[1] = address(0);
+
+        vm.prank(admin);
+        vm.expectRevert(IVoterRegistry.ZeroAddress.selector);
+        registry.authorizeVoters(ELECTION_ID, voters);
+    }
+
+    function test_authorizeVoters_revertsOnFirstDuplicate() public {
+        address[] memory voters = new address[](2);
+        voters[0] = voter;
+        voters[1] = voter;
+
+        vm.prank(admin);
+        vm.expectRevert(IVoterRegistry.AlreadyAuthorized.selector);
+        registry.authorizeVoters(ELECTION_ID, voters);
+    }
 
     // ----- role administration (inherited from AccessControl) ----------
 
@@ -139,5 +168,12 @@ contract VoterRegistryTest is Test {
 
     // ----- per-election isolation ---------------------------------------
 
-    function test_isAuthorized_isPerElection()        public { /* TODO(Dev A): authorize for 0, not 1 */ }
+    function test_isAuthorized_isPerElection() public {
+        uint256 otherElection = 1;
+        vm.prank(admin);
+        registry.authorizeVoter(ELECTION_ID, voter);
+
+        assertTrue(registry.isAuthorized(ELECTION_ID, voter));
+        assertFalse(registry.isAuthorized(otherElection, voter));
+    }
 }
