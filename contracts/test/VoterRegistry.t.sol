@@ -82,8 +82,23 @@ contract VoterRegistryTest is Test {
 
     // ----- revokeVoter ---------------------------------------------------
 
-    function test_revokeVoter_happyPath()             public { /* TODO(Dev A) */ }
-    function test_revokeVoter_revertsWhenNotAuthorized() public { /* TODO(Dev A) */ }
+    function test_revokeVoter_happyPath() public {
+        vm.prank(admin);
+        registry.authorizeVoter(ELECTION_ID, voter);
+
+        vm.prank(admin);
+        vm.expectEmit(true, true, true, false);
+        emit IVoterRegistry.VoterRevoked(ELECTION_ID, voter, admin);
+        registry.revokeVoter(ELECTION_ID, voter);
+
+        assertFalse(registry.isAuthorized(ELECTION_ID, voter));
+    }
+
+    function test_revokeVoter_revertsWhenNotAuthorized() public {
+        vm.prank(admin);
+        vm.expectRevert(IVoterRegistry.NotAuthorized.selector);
+        registry.revokeVoter(ELECTION_ID, voter);
+    }
 
     // ----- authorizeVoters (batch) --------------------------------------
 

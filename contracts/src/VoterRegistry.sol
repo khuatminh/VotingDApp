@@ -7,7 +7,7 @@ import {IVoterRegistry} from "./interfaces/IVoterRegistry.sol";
 /// @title VoterRegistry
 /// @author Dev A
 /// @notice Per-election voter authorization, guarded by role-based access control.
-/// @dev Partially implemented. `revokeVoter` and `authorizeVoters` still revert `TODO()`.
+/// @dev Partially implemented. `authorizeVoters` still reverts `TODO()`.
 ///      Spec: docs/superpowers/specs/2026-04-25-voting-dapp-design.md §4.2
 contract VoterRegistry is IVoterRegistry, AccessControl {
     // ---------------------------------------------------------------------
@@ -64,11 +64,11 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     /// @inheritdoc IVoterRegistry
     function revokeVoter(uint256 electionId, address voter)
         external
-        /* onlyRole(ADMIN_ROLE) */
+        onlyRole(ADMIN_ROLE)
     {
-        // TODO(Dev A): mirror of authorizeVoter; require currently authorized, emit VoterRevoked.
-        electionId; voter;
-        revert TODO();
+        if (!_authorized[electionId][voter]) revert NotAuthorized();
+        _authorized[electionId][voter] = false;
+        emit VoterRevoked(electionId, voter, msg.sender);
     }
 
     /// @inheritdoc IVoterRegistry
