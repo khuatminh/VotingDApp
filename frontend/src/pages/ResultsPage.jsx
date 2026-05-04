@@ -1,5 +1,5 @@
 // frontend/src/pages/ResultsPage.jsx
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useContract } from '../hooks/useContract'
 import { useElection } from '../hooks/useElection'
 import ElectionSelector from '../components/ElectionSelector'
@@ -23,54 +23,73 @@ export default function ResultsPage() {
   // Cleanup on unmount
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current) }, [])
 
-  useEffect(() => {
-    if (!selectedElection || !ready) return
-    loadResults(selectedElection)
-    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null } }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedElection, ready])
-
-  async function fetchSorted(electionId) {
-    const raw = await election.getResults(electionId)
-    return raw
-      .map(c => ({
-        id: Number(c.id),
-        name: c.name,
-        voteCount: Number(c.voteCount),
-      }))
-      .sort((a, b) => b.voteCount - a.voteCount)
-  }
-
-  async function loadResults(el) {
+  const loadResults = useCallback(async function loadResults(el) {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    setLoading(true)
     setResults([])
     setWinner(null)
 
-    if (el.state === NOT_STARTED) return
+    if (el.state === NOT_STARTED) { setLoading(false); return }
 
-    setLoading(true)
+    async function fetchSorted() {
+      const raw = await election.getResults(el.id)
+      const sorted = [...raw]
+        .map(c => ({ id: Number(c.id), name: c.name, description: c.description, voteCount: Number(c.voteCount), imageUrl: c.imageUrl }))
+        .sort((a, b) => b.voteCount - a.voteCount)
+      setResults(sorted)
+      return sorted
+    }
+
     try {
       if (el.state === OPEN) {
-        setResults(await fetchSorted(el.id))
+        await fetchSorted()
         pollRef.current = setInterval(async () => {
-          try { setResults(await fetchSorted(el.id)) } catch { /* ignore poll errors */ }
+          // Re-check election state to handle live-to-ended transition
+          try {
+            const current = await election.getElection(el.id)
+            const currentState = Number(current.state)
+            if (currentState === ENDED) {
+              // Election just ended — stop polling, fetch winner
+              clearInterval(pollRef.current)
+              pollRef.current = null
+              const sorted = await fetchSorted()
+              try {
+                const w = await election.getWinner(el.id)
+                setWinner({ id: Number(w.id), name: w.name, voteCount: Number(w.voteCount) })
+              } catch { setWinner(null) }
+            } else {
+              await fetchSorted()
+            }
+          } catch (err) { console.warn('poll error:', err) }
         }, POLL_MS)
       } else if (el.state === ENDED) {
-        const sorted = await fetchSorted(el.id)
-        setResults(sorted)
+        await fetchSorted()
         try {
           const w = await election.getWinner(el.id)
-          setWinner({ id: Number(w.id), name: w.name })
-        } catch {
-          setWinner(null) // NoVotesCast
-        }
+          setWinner({ id: Number(w.id), name: w.name, voteCount: Number(w.voteCount) })
+        } catch { setWinner(null) }
       }
     } catch (err) {
-      console.warn('ResultsPage loadResults:', err)
+      console.warn('loadResults error:', err)
+      setResults([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [election])
+
+  useEffect(() => {
+    if (!selectedElection || !ready) return
+    loadResults(selectedElection)
+    return () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    }
+  }, [selectedElection, ready, loadResults])
+
+  if (!ready) return (
+    <div className="container admin-page">
+      <p style={{ color: '#aaa' }}>Đang kết nối hợp đồng…</p>
+    </div>
+  )
 
   const totalVotes = results.reduce((sum, c) => sum + c.voteCount, 0)
 
@@ -96,6 +115,7 @@ export default function ResultsPage() {
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {results.map((c, i) => {
+            // Both IDs converted via Number() in fetchSorted / getWinner — contract guarantees consistency
             const isWinner = winner && c.id === winner.id
             const pct = totalVotes > 0 ? Math.round((c.voteCount / totalVotes) * 100) : 0
             return (
