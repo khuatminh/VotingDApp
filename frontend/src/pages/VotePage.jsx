@@ -19,6 +19,7 @@ export default function VotePage({ pushToast, setPendingTx }) {
   const [votedCandidateId, setVotedCandidateId] = useState(null)
   const [loadingVote, setLoadingVote] = useState(false)
   const [loadingCandidates, setLoadingCandidates] = useState(false)
+  const [loadError, setLoadError] = useState(null)
 
   useEffect(() => {
     if (!selectedElection || !ready) return
@@ -31,6 +32,7 @@ export default function VotePage({ pushToast, setPendingTx }) {
     setIsAuthorized(null)
     setVotedCandidateId(null)
     setCandidates([])
+    setLoadError(null)
     try {
       const [results, authorized, voteEvents] = await Promise.all([
         election.getResults(selectedElection.id),
@@ -54,16 +56,19 @@ export default function VotePage({ pushToast, setPendingTx }) {
       }
     } catch (err) {
       console.warn('VotePage loadElectionData:', err)
+      setLoadError('Không thể tải dữ liệu. Vui lòng thử lại.')
+      setIsAuthorized(false)
     } finally {
       setLoadingCandidates(false)
     }
   }
 
   async function handleVote(candidateId) {
+    if (!selectedElection) return
     setLoadingVote(true)
     try {
       const tx = await election.vote(selectedElection.id, candidateId)
-      setPendingTx('Bỏ phiếu', tx.hash)
+      setPendingTx({ label: 'Bỏ phiếu', hash: tx.hash })
       await tx.wait()
       setVotedCandidateId(candidateId)
       pushToast('Bỏ phiếu thành công!', 'success')
@@ -98,7 +103,9 @@ export default function VotePage({ pushToast, setPendingTx }) {
 
       {selectedElection && (
         <>
-          {isAuthorized === null || loadingCandidates ? (
+          {loadError ? (
+            <p style={{ color: '#f55' }}>{loadError}</p>
+          ) : isAuthorized === null || loadingCandidates ? (
             <p style={{ color: '#aaa' }}>Đang tải…</p>
           ) : !isAuthorized ? (
             <p style={{ color: '#aaa' }}>
