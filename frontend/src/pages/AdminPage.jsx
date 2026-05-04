@@ -1,47 +1,592 @@
-// Admin dashboard: elections, voters (per-election), admin-role management.
-// Spec §5.2. Three sections on one page; each is a TODO skeleton.
+import { useEffect, useRef, useState } from 'react';
 import { useContract } from '../hooks/useContract.js';
 
-export default function AdminPage() {
-  const { isAdmin, ready } = useContract();
+const STATE_LABELS = ['NotStarted', 'Open', 'Ended'];
+function stateLabel(s) { return STATE_LABELS[Number(s)] ?? 'NotStarted'; }
 
-  if (!ready) return <p>Connect a wallet to continue.</p>;
-  if (!isAdmin) return <p>Your account does not hold ADMIN_ROLE.</p>;
+function StateBadge({ state }) {
+  const cls =
+    state === 'Open'   ? 'badge-open' :
+    state === 'Ended'  ? 'badge-ended' : 'badge-notstarted';
+  return (
+    <span className={`badge ${cls}`}>
+      <span className="dot"></span>
+      {state === 'NotStarted' ? 'Not started' : state}
+    </span>
+  );
+}
+
+export default function AdminPage({ pushToast, setPendingTx }) {
+  const { voterRegistry, election, isAdmin, ready } = useContract();
+  const [tab, setTab]             = useState('elections');
+  const [elections, setElections] = useState([]);
+  const [admins, setAdmins]       = useState([]);
+  const [voters, setVoters]       = useState({});
+  const [loading, setLoading]     = useState(true);
+  const adminRoleRef = useRef(null);
+
+  useEffect(() => {
+    if (!ready) return;
+    setLoading(true);
+    Promise.all([loadElections(), loadAdmins()]).finally(() => setLoading(false));
+  }, [ready]);
+
+  async function loadElections() {
+    const count = Number(await election.electionCount());
+    if (count === 0) { setElections([]); return; }
+    const list = await Promise.all(
+      Array.from({ length: count }, (_, i) => election.getElection(i + 1))
+    );
+    setElections(list.map(e => ({
+      id:             Number(e.id),
+      name:           e.name,
+      description:    e.description,
+      creator:        e.creator,
+      state:          stateLabel(e.state),
+      candidateCount: Number(e.candidateCount),
+    })));
+  }
+
+  async function loadAdmins() {
+    const ADMIN_ROLE = await voterRegistry.ADMIN_ROLE();
+    adminRoleRef.current = ADMIN_ROLE;
+
+    const [vrGranted, vrRevoked, elGranted, elRevoked] = await Promise.all([
+      voterRegistry.queryFilter(voterRegistry.filters.RoleGranted(ADMIN_ROLE), 0),
+      voterRegistry.queryFilter(voterRegistry.filters.RoleRevoked(ADMIN_ROLE), 0),
+      election.queryFilter(election.filters.RoleGranted(ADMIN_ROLE), 0),
+      election.queryFilter(election.filters.RoleRevoked(ADMIN_ROLE), 0),
+    ]);
+
+    function buildSet(granted, revoked) {
+      const s = new Set(granted.map(l => l.args[1].toLowerCase()));
+      revoked.forEach(l => s.delete(l.args[1].toLowerCase()));
+      return s;
+    }
+    const vrSet = buildSet(vrGranted, vrRevoked);
+    const elSet = buildSet(elGranted, elRevoked);
+    const both  = [...vrSet].filter(a => elSet.has(a));
+
+    setAdmins(both.map(addr => ({ addr, grantedAt: '—', grantedBy: '—' })));
+  }
+
+  async function loadVoters(electionId) {
+    const eid = BigInt(electionId);
+    const [authorized, revoked] = await Promise.all([
+      voterRegistry.queryFilter(voterRegistry.filters.VoterAuthorized(eid), 0),
+      voterRegistry.queryFilter(voterRegistry.filters.VoterRevoked(eid), 0),
+    ]);
+    const s = new Set(authorized.map(l => l.args[1].toLowerCase()));
+    revoked.forEach(l => s.delete(l.args[1].toLowerCase()));
+    setVoters(prev => ({ ...prev, [electionId]: [...s] }));
+  }
+
+  if (!ready)   return <NotReady msg="Connect a wallet to continue." />;
+  if (!isAdmin) return <NotReady msg="Your account does not hold ADMIN_ROLE." />;
+  if (loading)  return <NotReady msg="Loading…" />;
 
   return (
-    <div className="admin-page">
-      <section>
-        <h2>Elections</h2>
-        {/* TODO(Dev A):
-            - List of all elections (use ElectionSelector's data source or a dedicated list).
-            - "Create election" form (name, description) → election.createElection(...)
-            - Per-row actions: "Add candidate" (opens form: name, description, imageUrl),
-              "Start", "End". Gate by state.
-        */}
-        <p>TODO: elections list + create form + per-row actions</p>
-      </section>
+    <div className="page">
+      <div className="container admin-page">
+        <div className="eyebrow mb-16">Admin</div>
+        <h1 style={{ fontWeight: 600, fontSize: 32, letterSpacing: '-.02em', marginBottom: 0 }}>
+          <em style={{ fontStyle: 'italic', color: 'var(--accent)' }}>Admin</em>
+        </h1>
 
-      <section>
-        <h2>Voters</h2>
-        {/* TODO(Dev A):
-            - ElectionSelector to pick target election.
-            - Address input + "Authorize" / "Revoke" buttons → voterRegistry.authorize/revoke.
-            - Batch authorize: textarea of newline-separated addresses → authorizeVoters.
-        */}
-        <p>TODO: voter authorization UI</p>
-      </section>
+        <div className="subtabs">
+          <button className={`subtab${tab === 'elections' ? ' active' : ''}`}
+            onClick={() => setTab('elections')}>
+            Elections <span className="num">{elections.length}</span>
+          </button>
+          <button className={`subtab${tab === 'voters' ? ' active' : ''}`}
+            onClick={() => setTab('voters')}>
+            Voters
+          </button>
+          <button className={`subtab${tab === 'admins' ? ' active' : ''}`}
+            onClick={() => setTab('admins')}>
+            Admins <span className="num">{admins.length}</span>
+          </button>
+        </div>
 
-      <section>
-        <h2>Admin roles</h2>
-        {/* TODO(Dev A):
-            - List of current ADMIN_ROLE holders, derived from RoleGranted/RoleRevoked events
-              on BOTH voterRegistry and election (queryFilter(fromBlock=0)).
-              Source of truth = intersection of both contracts (spec §3.4).
-            - Grant/revoke form: address input; fires grantRole/revokeRole on BOTH contracts
-              sequentially; shows per-tx status.
-        */}
-        <p>TODO: admin-role list + grant/revoke</p>
-      </section>
+        {tab === 'elections' && (
+          <ElectionsTab
+            elections={elections} setElections={setElections}
+            election={election}
+            pushToast={pushToast} setPendingTx={setPendingTx}
+          />
+        )}
+        {tab === 'voters' && (
+          <VotersTab
+            elections={elections}
+            voters={voters} setVoters={setVoters}
+            voterRegistry={voterRegistry}
+            loadVoters={loadVoters}
+            pushToast={pushToast} setPendingTx={setPendingTx}
+          />
+        )}
+        {tab === 'admins' && (
+          <AdminsTab
+            admins={admins} setAdmins={setAdmins}
+            voterRegistry={voterRegistry} election={election}
+            adminRoleRef={adminRoleRef}
+            pushToast={pushToast} setPendingTx={setPendingTx}
+          />
+        )}
+      </div>
     </div>
+  );
+}
+
+function NotReady({ msg }) {
+  return (
+    <div className="page">
+      <div className="container admin-page">
+        <p style={{ color: 'var(--ink-3)' }}>{msg}</p>
+      </div>
+    </div>
+  );
+}
+
+function ElectionsTab({ elections, setElections, election, pushToast, setPendingTx }) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [name, setName]             = useState('');
+  const [desc, setDesc]             = useState('');
+  const [creating, setCreating]     = useState(false);
+  const [addCandFor, setAddCandFor] = useState(null);
+  const [cName, setCName]           = useState('');
+  const [cDesc, setCDesc]           = useState('');
+  const [cImg, setCImg]             = useState('');
+  const [addingCand, setAddingCand] = useState(false);
+  const [starting, setStarting]     = useState(null);
+  const [ending, setEnding]         = useState(null);
+
+  async function handleCreate() {
+    if (!name.trim()) return;
+    setCreating(true);
+    try {
+      const tx = await election.createElection(name.trim(), desc.trim());
+      setPendingTx({ label: `Creating "${name.trim()}"…`, hash: tx.hash });
+      await tx.wait();
+      setElections(prev => [...prev, {
+        id: prev.length + 1,
+        name: name.trim(), description: desc.trim(),
+        state: 'NotStarted', candidateCount: 0,
+      }]);
+      pushToast('Election created', 'success');
+      setName(''); setDesc(''); setShowCreate(false);
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setCreating(false); setPendingTx(null); }
+  }
+
+  async function handleAddCandidate(electionId) {
+    if (!cName.trim()) return;
+    setAddingCand(true);
+    try {
+      const tx = await election.addCandidate(electionId, cName.trim(), cDesc.trim(), cImg.trim());
+      setPendingTx({ label: `Adding "${cName.trim()}"…`, hash: tx.hash });
+      await tx.wait();
+      setElections(prev => prev.map(e =>
+        e.id === electionId ? { ...e, candidateCount: e.candidateCount + 1 } : e
+      ));
+      pushToast('Candidate added', 'success');
+      setCName(''); setCDesc(''); setCImg(''); setAddCandFor(null);
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setAddingCand(false); setPendingTx(null); }
+  }
+
+  async function handleStart(electionId) {
+    setStarting(electionId);
+    try {
+      const tx = await election.startElection(electionId);
+      setPendingTx({ label: 'Opening polls…', hash: tx.hash });
+      await tx.wait();
+      setElections(prev => prev.map(e => e.id === electionId ? { ...e, state: 'Open' } : e));
+      pushToast('Election opened', 'success');
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setStarting(null); setPendingTx(null); }
+  }
+
+  async function handleEnd(electionId) {
+    setEnding(electionId);
+    try {
+      const tx = await election.endElection(electionId);
+      setPendingTx({ label: 'Closing election…', hash: tx.hash });
+      await tx.wait();
+      setElections(prev => prev.map(e => e.id === electionId ? { ...e, state: 'Ended' } : e));
+      pushToast('Election ended', 'success');
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setEnding(null); setPendingTx(null); }
+  }
+
+  return (
+    <>
+      <div className="row-h gap-12" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
+        <div className="eyebrow">All ballots</div>
+        <button className="btn btn-primary" onClick={() => setShowCreate(s => !s)}>
+          {showCreate ? 'Cancel' : '+ New election'}
+        </button>
+      </div>
+
+      {showCreate && (
+        <div className="form-card mb-24">
+          <div className="grid-2">
+            <div className="field">
+              <label>Name</label>
+              <input className="input" value={name} onChange={e => setName(e.target.value)}
+                placeholder="Election name" />
+            </div>
+            <div className="field">
+              <label>Description</label>
+              <input className="input" value={desc} onChange={e => setDesc(e.target.value)}
+                placeholder="Short description" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+            <button className="btn" onClick={() => setShowCreate(false)}>Cancel</button>
+            <button className="btn btn-accent" onClick={handleCreate}
+              disabled={!name.trim() || creating}>
+              {creating ? 'Creating…' : 'Create election'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="col gap-16">
+        {elections.length === 0 && (
+          <p style={{ color: 'var(--ink-3)', fontSize: 13 }}>No elections yet.</p>
+        )}
+        {elections.map(e => (
+          <div key={e.id}>
+            <div className="row-card">
+              <div className="meta">
+                <div className="row-h gap-12" style={{ flexWrap: 'wrap' }}>
+                  <span className="title">{e.name}</span>
+                  <StateBadge state={e.state} />
+                </div>
+                <div className="sub">
+                  #{String(e.id).padStart(3, '0')} &middot; {e.candidateCount} candidate{e.candidateCount !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <div className="actions">
+                {e.state === 'NotStarted' && (<>
+                  <button className="btn btn-sm"
+                    onClick={() => setAddCandFor(addCandFor === e.id ? null : e.id)}>
+                    + Candidate
+                  </button>
+                  <button className="btn btn-sm btn-primary"
+                    disabled={e.candidateCount < 2 || starting === e.id}
+                    onClick={() => handleStart(e.id)}>
+                    {starting === e.id ? 'Opening…' : 'Open polls'}
+                  </button>
+                </>)}
+                {e.state === 'Open' && (
+                  <button className="btn btn-sm btn-danger"
+                    disabled={ending === e.id}
+                    onClick={() => handleEnd(e.id)}>
+                    {ending === e.id ? 'Closing…' : 'End election'}
+                  </button>
+                )}
+                {e.state === 'Ended' && <StateBadge state="Ended" />}
+              </div>
+            </div>
+
+            {addCandFor === e.id && (
+              <div className="form-card" style={{ marginTop: 8 }}>
+                <div className="grid-3">
+                  <div className="field">
+                    <label>Name</label>
+                    <input className="input" value={cName} onChange={ev => setCName(ev.target.value)}
+                      placeholder="Full name" />
+                  </div>
+                  <div className="field">
+                    <label>Description</label>
+                    <input className="input" value={cDesc} onChange={ev => setCDesc(ev.target.value)}
+                      placeholder="One-line platform" />
+                  </div>
+                  <div className="field">
+                    <label>Image URL</label>
+                    <input className="input" value={cImg} onChange={ev => setCImg(ev.target.value)}
+                      placeholder="https://…" />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                  <button className="btn btn-sm" onClick={() => setAddCandFor(null)}>Cancel</button>
+                  <button className="btn btn-sm btn-accent"
+                    disabled={!cName.trim() || addingCand}
+                    onClick={() => handleAddCandidate(e.id)}>
+                    {addingCand ? 'Adding…' : 'Add candidate'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function VotersTab({ elections, voters, setVoters, voterRegistry, loadVoters, pushToast, setPendingTx }) {
+  const [pickedId, setPickedId]       = useState(elections[0]?.id ?? null);
+  const [single, setSingle]           = useState('');
+  const [batch, setBatch]             = useState('');
+  const [authorizing, setAuthorizing] = useState(false);
+  const [revoking, setRevoking]       = useState(null);
+  const [batchAuth, setBatchAuth]     = useState(false);
+
+  useEffect(() => {
+    if (pickedId !== null && !voters[pickedId]) loadVoters(pickedId);
+  }, [pickedId]);
+
+  const list = voters[pickedId] ?? [];
+
+  async function handleAuthorize() {
+    if (!single.startsWith('0x') || pickedId === null) return;
+    setAuthorizing(true);
+    try {
+      const tx = await voterRegistry.authorizeVoter(pickedId, single);
+      setPendingTx({ label: `Authorising ${single.slice(0, 10)}…`, hash: tx.hash });
+      await tx.wait();
+      setVoters(prev => ({ ...prev, [pickedId]: [...(prev[pickedId] ?? []), single.toLowerCase()] }));
+      pushToast('Voter authorised', 'success');
+      setSingle('');
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setAuthorizing(false); setPendingTx(null); }
+  }
+
+  async function handleRevoke(addr) {
+    if (pickedId === null) return;
+    setRevoking(addr);
+    try {
+      const tx = await voterRegistry.revokeVoter(pickedId, addr);
+      setPendingTx({ label: `Revoking ${addr.slice(0, 10)}…`, hash: tx.hash });
+      await tx.wait();
+      setVoters(prev => ({
+        ...prev,
+        [pickedId]: (prev[pickedId] ?? []).filter(a => a !== addr.toLowerCase()),
+      }));
+      pushToast('Voter revoked', 'success');
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setRevoking(null); setPendingTx(null); }
+  }
+
+  async function handleBatchAuthorize() {
+    if (pickedId === null) return;
+    const addrs = batch.split(/[\s,]+/).filter(a => a.startsWith('0x') && a.length >= 10);
+    if (!addrs.length) return;
+    setBatchAuth(true);
+    try {
+      const tx = await voterRegistry.authorizeVoters(pickedId, addrs);
+      setPendingTx({ label: `Authorising ${addrs.length} voters…`, hash: tx.hash });
+      await tx.wait();
+      setVoters(prev => ({
+        ...prev,
+        [pickedId]: [...new Set([...(prev[pickedId] ?? []), ...addrs.map(a => a.toLowerCase())])],
+      }));
+      pushToast(`${addrs.length} voters authorised`, 'success');
+      setBatch('');
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setBatchAuth(false); setPendingTx(null); }
+  }
+
+  return (
+    <>
+      <div className="eyebrow mb-16">Per-election authorisation</div>
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
+        {elections.map(e => (
+          <button key={e.id}
+            className={`chip${e.id === pickedId ? ' active' : ''}`}
+            style={{ height: 40, padding: '0 18px' }}
+            onClick={() => setPickedId(e.id)}>
+            {e.name.length > 36 ? e.name.slice(0, 34) + '…' : e.name}
+            <span className="count">{(voters[e.id] ?? []).length}</span>
+          </button>
+        ))}
+        {elections.length === 0 && (
+          <p style={{ color: 'var(--ink-3)', fontSize: 13 }}>No elections yet.</p>
+        )}
+      </div>
+
+      {pickedId !== null && (
+        <>
+          <div className="grid-2 mb-24">
+            <div className="form-card">
+              <div className="eyebrow mb-16">Authorise single</div>
+              <div className="field">
+                <label>Address</label>
+                <input className="input" value={single}
+                  onChange={e => setSingle(e.target.value)} placeholder="0x…" />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                <button className="btn btn-sm btn-accent"
+                  disabled={!single.startsWith('0x') || authorizing}
+                  onClick={handleAuthorize}>
+                  {authorizing ? 'Authorising…' : 'Authorise'}
+                </button>
+              </div>
+            </div>
+
+            <div className="form-card">
+              <div className="eyebrow mb-16">Batch authorise</div>
+              <div className="field">
+                <label>Comma- or newline-separated</label>
+                <textarea className="textarea" value={batch}
+                  onChange={e => setBatch(e.target.value)}
+                  placeholder={'0x1A2b…\n0x2B3c…'} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                <button className="btn btn-sm btn-accent"
+                  disabled={!batch.trim() || batchAuth}
+                  onClick={handleBatchAuthorize}>
+                  {batchAuth ? 'Authorising…' : 'Authorise batch'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{
+              padding: '20px 24px', borderBottom: '1px solid var(--line)',
+              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+            }}>
+              <div style={{ fontWeight: 600, fontSize: 18 }}>{list.length} voters</div>
+            </div>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th style={{ width: 40 }}>#</th>
+                  <th>Address</th><th>Status</th><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((addr, i) => (
+                  <tr key={addr}>
+                    <td style={{ color: 'var(--ink-3)' }}>{i + 1}</td>
+                    <td className="mono" style={{ fontSize: 12 }}>{addr}</td>
+                    <td>
+                      <span className="badge badge-open">
+                        <span className="dot"></span>Authorised
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn btn-sm btn-danger"
+                        disabled={revoking === addr}
+                        onClick={() => handleRevoke(addr)}>
+                        {revoking === addr ? 'Revoking…' : 'Revoke'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {list.length === 0 && (
+                  <tr><td colSpan={4} className="empty">No voters authorised yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function AdminsTab({ admins, setAdmins, voterRegistry, election, adminRoleRef, pushToast, setPendingTx }) {
+  const [addr, setAddr]         = useState('');
+  const [granting, setGranting] = useState(false);
+  const [revoking, setRevoking] = useState(null);
+
+  async function handleGrant() {
+    const ADMIN_ROLE = adminRoleRef.current;
+    if (!addr.startsWith('0x') || !ADMIN_ROLE || granting) return;
+    setGranting(true);
+    try {
+      const tx1 = await voterRegistry.grantRole(ADMIN_ROLE, addr);
+      setPendingTx({ label: 'Granting on VoterRegistry…', hash: tx1.hash });
+      await tx1.wait();
+      const tx2 = await election.grantRole(ADMIN_ROLE, addr);
+      setPendingTx({ label: 'Granting on Election…', hash: tx2.hash });
+      await tx2.wait();
+      setAdmins(prev => [...prev, { addr: addr.toLowerCase(), grantedAt: '—', grantedBy: '—' }]);
+      pushToast('Admin role granted on both contracts', 'success');
+      setAddr('');
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setGranting(false); setPendingTx(null); }
+  }
+
+  async function handleRevoke(target) {
+    const ADMIN_ROLE = adminRoleRef.current;
+    if (!ADMIN_ROLE) return;
+    setRevoking(target);
+    try {
+      const tx1 = await voterRegistry.revokeRole(ADMIN_ROLE, target);
+      setPendingTx({ label: 'Revoking on VoterRegistry…', hash: tx1.hash });
+      await tx1.wait();
+      const tx2 = await election.revokeRole(ADMIN_ROLE, target);
+      setPendingTx({ label: 'Revoking on Election…', hash: tx2.hash });
+      await tx2.wait();
+      setAdmins(prev => prev.filter(a => a.addr !== target.toLowerCase()));
+      pushToast('Admin role revoked on both contracts', 'success');
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setRevoking(null); setPendingTx(null); }
+  }
+
+  return (
+    <>
+      <div className="alert alert-info mb-24">
+        <span className="ico">i</span>
+        <span>
+          Grant/revoke fires <strong>two</strong> transactions &mdash; one on VoterRegistry, one on Election.
+        </span>
+      </div>
+
+      <div className="form-card mb-24">
+        <div className="row-h gap-12" style={{ alignItems: 'flex-end' }}>
+          <div className="field grow">
+            <label>Grant ADMIN_ROLE to</label>
+            <input className="input" value={addr}
+              onChange={e => setAddr(e.target.value)} placeholder="0x…" />
+          </div>
+          <button className="btn btn-accent"
+            disabled={!addr.startsWith('0x') || granting}
+            onClick={handleGrant}>
+            {granting ? 'Granting…' : 'Grant'}
+          </button>
+        </div>
+      </div>
+
+      <div className="form-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--line)' }}>
+          <div style={{ fontWeight: 600, fontSize: 18 }}>Admins</div>
+        </div>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th style={{ width: 40 }}>#</th>
+              <th>Address</th><th>Granted</th><th>By</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {admins.map((a, i) => (
+              <tr key={a.addr}>
+                <td style={{ color: 'var(--ink-3)' }}>{i + 1}</td>
+                <td className="mono" style={{ fontSize: 12 }}>{a.addr}</td>
+                <td className="mono">{a.grantedAt}</td>
+                <td className="mono">{a.grantedBy}</td>
+                <td style={{ textAlign: 'right' }}>
+                  <button className="btn btn-sm btn-danger"
+                    disabled={admins.length <= 1 || revoking === a.addr}
+                    onClick={() => handleRevoke(a.addr)}>
+                    {revoking === a.addr ? 'Revoking…' : 'Revoke'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {admins.length === 0 && (
+              <tr><td colSpan={5} className="empty">No admins loaded.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
