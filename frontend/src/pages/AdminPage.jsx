@@ -18,11 +18,12 @@ function StateBadge({ state }) {
 
 export default function AdminPage({ pushToast, setPendingTx }) {
   const { voterRegistry, election, isAdmin, ready } = useContract();
-  const [tab, setTab]             = useState('elections');
-  const [elections, setElections] = useState([]);
-  const [admins, setAdmins]       = useState([]);
-  const [voters, setVoters]       = useState({});
-  const [loading, setLoading]     = useState(true);
+  const [tab, setTab]               = useState('elections');
+  const [elections, setElections]   = useState([]);
+  const [candidates, setCandidates] = useState({});
+  const [admins, setAdmins]         = useState([]);
+  const [voters, setVoters]         = useState({});
+  const [loading, setLoading]       = useState(true);
   const adminRoleRef = useRef(null);
 
   useEffect(() => {
@@ -35,16 +36,18 @@ export default function AdminPage({ pushToast, setPendingTx }) {
     const count = Number(await election.electionCount());
     if (count === 0) { setElections([]); return; }
     const list = await Promise.all(
-      Array.from({ length: count }, (_, i) => election.getElection(i + 1))
+      Array.from({ length: count }, (_, i) => election.getElection(i))
     );
-    setElections(list.map(e => ({
-      id:             Number(e.id),
-      name:           e.name,
-      description:    e.description,
-      creator:        e.creator,
-      state:          stateLabel(e.state),
-      candidateCount: Number(e.candidateCount),
-    })));
+    setElections(list
+      .filter(e => !e.deleted)
+      .map(e => ({
+        id:             Number(e.id),
+        name:           e.name,
+        description:    e.description,
+        creator:        e.creator,
+        state:          stateLabel(e.state),
+        candidateCount: Number(e.candidateCount),
+      })));
   }
 
   async function loadAdmins() {
@@ -68,6 +71,20 @@ export default function AdminPage({ pushToast, setPendingTx }) {
     const both  = [...vrSet].filter(a => elSet.has(a));
 
     setAdmins(both.map(addr => ({ addr, grantedAt: '—', grantedBy: '—' })));
+  }
+
+  async function loadCandidates(electionId) {
+    const results = await election.getResults(electionId);
+    setCandidates(prev => ({
+      ...prev,
+      [electionId]: results.map(c => ({
+        id:          Number(c.id),
+        name:        c.name,
+        description: c.description,
+        imageUrl:    c.imageUrl,
+        voteCount:   Number(c.voteCount),
+      })),
+    }));
   }
 
   async function loadVoters(electionId) {
@@ -111,6 +128,8 @@ export default function AdminPage({ pushToast, setPendingTx }) {
         {tab === 'elections' && (
           <ElectionsTab
             elections={elections} setElections={setElections}
+            candidates={candidates} setCandidates={setCandidates}
+            loadCandidates={loadCandidates}
             election={election}
             pushToast={pushToast} setPendingTx={setPendingTx}
           />
@@ -147,18 +166,70 @@ function NotReady({ msg }) {
   );
 }
 
-function ElectionsTab({ elections, setElections, election, pushToast, setPendingTx }) {
+function ElectionsTab({
+  elections, setElections,
+  candidates, setCandidates, loadCandidates,
+  election,
+  pushToast, setPendingTx,
+}) {
+  // Create election
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName]             = useState('');
   const [desc, setDesc]             = useState('');
   const [creating, setCreating]     = useState(false);
+
+  // Add candidate
   const [addCandFor, setAddCandFor] = useState(null);
   const [cName, setCName]           = useState('');
   const [cDesc, setCDesc]           = useState('');
   const [cImg, setCImg]             = useState('');
   const [addingCand, setAddingCand] = useState(false);
+
+  // Lifecycle
   const [starting, setStarting]     = useState(null);
   const [ending, setEnding]         = useState(null);
+
+  // Edit election
+  const [editId, setEditId]         = useState(null);
+  const [editName, setEditName]     = useState('');
+  const [editDesc, setEditDesc]     = useState('');
+  const [updating, setUpdating]     = useState(null);
+
+  // Delete election
+  const [deleting, setDeleting]     = useState(null);
+
+  // Expand candidates panel
+  const [expandedId, setExpandedId] = useState(null);
+
+  // Edit candidate — key is `${electionId}-${candidateId}`
+  const [editCandKey, setEditCandKey]   = useState(null);
+  const [ecName, setEcName]             = useState('');
+  const [ecDesc, setEcDesc]             = useState('');
+  const [ecImg, setEcImg]               = useState('');
+  const [updatingCand, setUpdatingCand] = useState(null);
+
+  // Delete candidate
+  const [deletingCand, setDeletingCand] = useState(null);
+
+  function openEdit(e) {
+    setEditId(e.id);
+    setEditName(e.name);
+    setEditDesc(e.description);
+    setAddCandFor(null);
+  }
+
+  function openEditCand(eid, c) {
+    setEditCandKey(`${eid}-${c.id}`);
+    setEcName(c.name);
+    setEcDesc(c.description);
+    setEcImg(c.imageUrl);
+  }
+
+  async function handleToggleExpand(eid) {
+    if (expandedId === eid) { setExpandedId(null); return; }
+    setExpandedId(eid);
+    if (!candidates[eid]) await loadCandidates(eid);
+  }
 
   async function handleCreate() {
     if (!name.trim()) return;
@@ -168,7 +239,7 @@ function ElectionsTab({ elections, setElections, election, pushToast, setPending
       setPendingTx({ label: `Creating "${name.trim()}"…`, hash: tx.hash });
       await tx.wait();
       setElections(prev => [...prev, {
-        id: prev.length + 1,
+        id: prev.length,
         name: name.trim(), description: desc.trim(),
         state: 'NotStarted', candidateCount: 0,
       }]);
@@ -176,6 +247,35 @@ function ElectionsTab({ elections, setElections, election, pushToast, setPending
       setName(''); setDesc(''); setShowCreate(false);
     } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
     finally { setCreating(false); setPendingTx(null); }
+  }
+
+  async function handleUpdate(electionId) {
+    if (!editName.trim()) return;
+    setUpdating(electionId);
+    try {
+      const tx = await election.updateElection(electionId, editName.trim(), editDesc.trim());
+      setPendingTx({ label: 'Updating election…', hash: tx.hash });
+      await tx.wait();
+      setElections(prev => prev.map(e =>
+        e.id === electionId ? { ...e, name: editName.trim(), description: editDesc.trim() } : e
+      ));
+      pushToast('Election updated', 'success');
+      setEditId(null);
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setUpdating(null); setPendingTx(null); }
+  }
+
+  async function handleDelete(electionId) {
+    setDeleting(electionId);
+    try {
+      const tx = await election.deleteElection(electionId);
+      setPendingTx({ label: 'Deleting election…', hash: tx.hash });
+      await tx.wait();
+      setElections(prev => prev.filter(e => e.id !== electionId));
+      if (expandedId === electionId) setExpandedId(null);
+      pushToast('Election deleted', 'success');
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setDeleting(null); setPendingTx(null); }
   }
 
   async function handleAddCandidate(electionId) {
@@ -188,10 +288,54 @@ function ElectionsTab({ elections, setElections, election, pushToast, setPending
       setElections(prev => prev.map(e =>
         e.id === electionId ? { ...e, candidateCount: e.candidateCount + 1 } : e
       ));
+      setCandidates(prev => {
+        if (!prev[electionId]) return prev;
+        const newCand = { id: prev[electionId].length, name: cName.trim(), description: cDesc.trim(), imageUrl: cImg.trim(), voteCount: 0 };
+        return { ...prev, [electionId]: [...prev[electionId], newCand] };
+      });
       pushToast('Candidate added', 'success');
       setCName(''); setCDesc(''); setCImg(''); setAddCandFor(null);
     } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
     finally { setAddingCand(false); setPendingTx(null); }
+  }
+
+  async function handleUpdateCandidate(electionId, candidateId) {
+    if (!ecName.trim()) return;
+    const key = `${electionId}-${candidateId}`;
+    setUpdatingCand(key);
+    try {
+      const tx = await election.updateCandidate(electionId, candidateId, ecName.trim(), ecDesc.trim(), ecImg.trim());
+      setPendingTx({ label: 'Updating candidate…', hash: tx.hash });
+      await tx.wait();
+      setCandidates(prev => ({
+        ...prev,
+        [electionId]: (prev[electionId] ?? []).map(c =>
+          c.id === candidateId
+            ? { ...c, name: ecName.trim(), description: ecDesc.trim(), imageUrl: ecImg.trim() }
+            : c
+        ),
+      }));
+      pushToast('Candidate updated', 'success');
+      setEditCandKey(null);
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setUpdatingCand(null); setPendingTx(null); }
+  }
+
+  async function handleDeleteCandidate(electionId, candidateId) {
+    const key = `${electionId}-${candidateId}`;
+    setDeletingCand(key);
+    try {
+      const tx = await election.deleteCandidate(electionId, candidateId);
+      setPendingTx({ label: 'Deleting candidate…', hash: tx.hash });
+      await tx.wait();
+      // swap-and-pop changes IDs, so reload from chain
+      await loadCandidates(electionId);
+      setElections(prev => prev.map(e =>
+        e.id === electionId ? { ...e, candidateCount: e.candidateCount - 1 } : e
+      ));
+      pushToast('Candidate deleted', 'success');
+    } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
+    finally { setDeletingCand(null); setPendingTx(null); }
   }
 
   async function handleStart(electionId) {
@@ -257,6 +401,7 @@ function ElectionsTab({ elections, setElections, election, pushToast, setPending
         )}
         {elections.map(e => (
           <div key={e.id}>
+            {/* Main row */}
             <div className="row-card">
               <div className="meta">
                 <div className="row-h gap-12" style={{ flexWrap: 'wrap' }}>
@@ -264,10 +409,27 @@ function ElectionsTab({ elections, setElections, election, pushToast, setPending
                   <StateBadge state={e.state} />
                 </div>
                 <div className="sub">
-                  #{String(e.id).padStart(3, '0')} &middot; {e.candidateCount} candidate{e.candidateCount !== 1 ? 's' : ''}
+                  #{String(e.id).padStart(3, '0')} &middot;{' '}
+                  {e.candidateCount} candidate{e.candidateCount !== 1 ? 's' : ''}
+                  {e.description && <> &middot; {e.description}</>}
                 </div>
               </div>
               <div className="actions">
+                <button className="btn btn-sm"
+                  onClick={() => handleToggleExpand(e.id)}>
+                  {expandedId === e.id ? '▲ Hide' : '▼ Candidates'}
+                </button>
+                <button className="btn btn-sm"
+                  onClick={() => editId === e.id ? setEditId(null) : openEdit(e)}>
+                  {editId === e.id ? 'Cancel' : 'Edit'}
+                </button>
+                {e.state === 'NotStarted' && (
+                  <button className="btn btn-sm btn-danger"
+                    disabled={deleting === e.id}
+                    onClick={() => handleDelete(e.id)}>
+                    {deleting === e.id ? 'Deleting…' : 'Delete'}
+                  </button>
+                )}
                 {e.state === 'NotStarted' && (<>
                   <button className="btn btn-sm"
                     onClick={() => setAddCandFor(addCandFor === e.id ? null : e.id)}>
@@ -286,12 +448,40 @@ function ElectionsTab({ elections, setElections, election, pushToast, setPending
                     {ending === e.id ? 'Closing…' : 'End election'}
                   </button>
                 )}
-                {e.state === 'Ended' && <StateBadge state="Ended" />}
               </div>
             </div>
 
+            {/* Edit election form */}
+            {editId === e.id && (
+              <div className="form-card" style={{ marginTop: 8 }}>
+                <div className="eyebrow mb-12">Edit election</div>
+                <div className="grid-2">
+                  <div className="field">
+                    <label>Name</label>
+                    <input className="input" value={editName}
+                      onChange={ev => setEditName(ev.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Description</label>
+                    <input className="input" value={editDesc}
+                      onChange={ev => setEditDesc(ev.target.value)} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                  <button className="btn btn-sm" onClick={() => setEditId(null)}>Cancel</button>
+                  <button className="btn btn-sm btn-accent"
+                    disabled={!editName.trim() || updating === e.id}
+                    onClick={() => handleUpdate(e.id)}>
+                    {updating === e.id ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Add candidate form */}
             {addCandFor === e.id && (
               <div className="form-card" style={{ marginTop: 8 }}>
+                <div className="eyebrow mb-12">Add candidate</div>
                 <div className="grid-3">
                   <div className="field">
                     <label>Name</label>
@@ -317,6 +507,89 @@ function ElectionsTab({ elections, setElections, election, pushToast, setPending
                     {addingCand ? 'Adding…' : 'Add candidate'}
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Candidates panel */}
+            {expandedId === e.id && (
+              <div className="form-card" style={{ marginTop: 8, padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--line)' }}>
+                  <div className="eyebrow">Candidates</div>
+                </div>
+                {!candidates[e.id] ? (
+                  <div style={{ padding: '16px 20px', color: 'var(--ink-3)', fontSize: 13 }}>Loading…</div>
+                ) : candidates[e.id].length === 0 ? (
+                  <div style={{ padding: '16px 20px', color: 'var(--ink-3)', fontSize: 13 }}>No candidates yet.</div>
+                ) : (
+                  <div style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {candidates[e.id].map(c => (
+                      <div key={c.id}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                          <div>
+                            <span style={{ fontWeight: 600 }}>{c.name}</span>
+                            {c.description && (
+                              <span style={{ color: 'var(--ink-3)', marginLeft: 10, fontSize: 13 }}>{c.description}</span>
+                            )}
+                            {(e.state === 'Open' || e.state === 'Ended') && (
+                              <span style={{ marginLeft: 10, fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
+                                {c.voteCount} vote{c.voteCount !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                            <button className="btn btn-sm"
+                              onClick={() =>
+                                editCandKey === `${e.id}-${c.id}`
+                                  ? setEditCandKey(null)
+                                  : openEditCand(e.id, c)
+                              }>
+                              {editCandKey === `${e.id}-${c.id}` ? 'Cancel' : 'Edit'}
+                            </button>
+                            {e.state === 'NotStarted' && (
+                              <button className="btn btn-sm btn-danger"
+                                disabled={deletingCand === `${e.id}-${c.id}`}
+                                onClick={() => handleDeleteCandidate(e.id, c.id)}>
+                                {deletingCand === `${e.id}-${c.id}` ? 'Deleting…' : 'Delete'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Edit candidate form */}
+                        {editCandKey === `${e.id}-${c.id}` && (
+                          <div className="form-card" style={{ marginTop: 8 }}>
+                            <div className="grid-3">
+                              <div className="field">
+                                <label>Name</label>
+                                <input className="input" value={ecName}
+                                  onChange={ev => setEcName(ev.target.value)} />
+                              </div>
+                              <div className="field">
+                                <label>Description</label>
+                                <input className="input" value={ecDesc}
+                                  onChange={ev => setEcDesc(ev.target.value)} />
+                              </div>
+                              <div className="field">
+                                <label>Image URL</label>
+                                <input className="input" value={ecImg}
+                                  onChange={ev => setEcImg(ev.target.value)}
+                                  placeholder="https://…" />
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                              <button className="btn btn-sm" onClick={() => setEditCandKey(null)}>Cancel</button>
+                              <button className="btn btn-sm btn-accent"
+                                disabled={!ecName.trim() || updatingCand === `${e.id}-${c.id}`}
+                                onClick={() => handleUpdateCandidate(e.id, c.id)}>
+                                {updatingCand === `${e.id}-${c.id}` ? 'Saving…' : 'Save'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

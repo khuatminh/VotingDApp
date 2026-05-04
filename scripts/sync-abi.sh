@@ -38,7 +38,7 @@ fi
 if [[ -n "$CHAIN_ID" ]]; then
   BROADCAST="$ROOT/contracts/broadcast/Deploy.s.sol/$CHAIN_ID/run-latest.json"
   if [[ -f "$BROADCAST" ]]; then
-    echo "Updating addresses.json for chain $CHAIN_ID…"
+    echo "Updating addresses.json for chain ${CHAIN_ID}..."
     REG=$(jq -r '.transactions[] | select(.contractName=="VoterRegistry") | .contractAddress' "$BROADCAST" | tail -n1)
     ELE=$(jq -r '.transactions[] | select(.contractName=="Election")      | .contractAddress' "$BROADCAST" | tail -n1)
     ADDR="$DEST/addresses.json"

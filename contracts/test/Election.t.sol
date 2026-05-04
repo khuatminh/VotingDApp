@@ -90,7 +90,8 @@ contract ElectionTest is Test {
             address creator,
             Election.State state,
             uint256 cc,
-            uint256 tv
+            uint256 tv,
+
         ) = election.getElection(0);
         assertEq(eid, 0);
         assertEq(name, "Test Election");
@@ -179,7 +180,7 @@ contract ElectionTest is Test {
         emit Election.ElectionStarted(eid);
         election.startElection(eid);
 
-        (, , , , Election.State state, , ) = election.getElection(eid);
+        (, , , , Election.State state, , , ) = election.getElection(eid);
         assertTrue(state == Election.State.Open);
     }
 
@@ -212,7 +213,7 @@ contract ElectionTest is Test {
         emit Election.ElectionEnded(eid);
         election.endElection(eid);
 
-        (, , , , Election.State state, , ) = election.getElection(eid);
+        (, , , , Election.State state, , , ) = election.getElection(eid);
         assertTrue(state == Election.State.Ended);
     }
 
@@ -240,7 +241,7 @@ contract ElectionTest is Test {
 
         Election.Candidate memory c = election.getCandidate(eid, 0);
         assertEq(c.voteCount, 1);
-        (, , , , , , uint256 totalVotes) = election.getElection(eid);
+        (, , , , , , uint256 totalVotes, ) = election.getElection(eid);
         assertEq(totalVotes, 1);
     }
 
@@ -380,8 +381,8 @@ contract ElectionTest is Test {
         vm.prank(voter1);
         election.vote(eid0, 0);
 
-        (, , , , , , uint256 tv0) = election.getElection(eid0);
-        (, , , , , , uint256 tv1) = election.getElection(eid1);
+        (, , , , , , uint256 tv0, ) = election.getElection(eid0);
+        (, , , , , , uint256 tv1, ) = election.getElection(eid1);
         assertEq(tv0, 1);
         assertEq(tv1, 0);
     }
