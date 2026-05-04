@@ -1,17 +1,39 @@
-// Renders "Connect Wallet" or a short address badge when connected.
+import { useState } from 'react';
 import { useWallet } from '../hooks/useWallet.js';
-import AddressBadge from './AddressBadge.jsx';
+import { shortAddr } from '../lib/utils.js';
 
 export default function ConnectButton() {
   const { address, isConnected, connect } = useWallet();
+  const [error, setError] = useState(null);
+
+  async function handleConnect() {
+    setError(null);
+    try {
+      await connect();
+    } catch {
+      setError('MetaMask not found or rejected');
+    }
+  }
 
   if (isConnected) {
-    return <AddressBadge address={address} />;
+    return (
+      <span className="wallet">
+        <span className="mono">{shortAddr(address, 4, 4)}</span>
+        <span className="avatar"></span>
+      </span>
+    );
   }
+
   return (
-    <button type="button" onClick={connect} className="btn btn--primary">
-      Connect Wallet
-    </button>
+    <div>
+      <button className="btn btn-primary btn-sm" onClick={handleConnect}>
+        Connect
+      </button>
+      {error && (
+        <div style={{ fontSize: 11, color: 'var(--bad)', marginTop: 4, textAlign: 'right' }}>
+          {error}
+        </div>
+      )}
+    </div>
   );
-  // TODO(Dev A): surface errors from connect() via a toast or inline message.
 }

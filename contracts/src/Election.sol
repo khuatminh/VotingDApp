@@ -40,6 +40,7 @@ contract Election is AccessControl {
         State   state;
         uint256 candidateCount;
         uint256 totalVotes;
+        bool    deleted;
         mapping(uint256 => Candidate) candidates;
         mapping(address => bool)       hasVoted;
     }
@@ -72,7 +73,11 @@ contract Election is AccessControl {
     // ---------------------------------------------------------------------
 
     event ElectionCreated(uint256 indexed electionId, address indexed creator, string name);
+    event ElectionUpdated(uint256 indexed electionId, string name, string description);
+    event ElectionRemoved(uint256 indexed electionId);
     event CandidateAdded(uint256 indexed electionId, uint256 indexed candidateId, string name);
+    event CandidateUpdated(uint256 indexed electionId, uint256 indexed candidateId, string name);
+    event CandidateRemoved(uint256 indexed electionId, uint256 indexed candidateId);
     event ElectionStarted(uint256 indexed electionId);
     event ElectionEnded(uint256 indexed electionId);
     event VoteCast(uint256 indexed electionId, uint256 indexed candidateId, address indexed voter);
@@ -138,6 +143,7 @@ contract Election is AccessControl {
         string calldata imageUrl
     ) external onlyRole(ADMIN_ROLE) returns (uint256 candidateId) {
         ElectionData storage e = _election(electionId);
+        if (e.deleted)               revert ElectionNotFound();
         if (e.state == State.Open)   revert ElectionAlreadyStarted();
         if (e.state == State.Ended)  revert ElectionAlreadyEnded();
         if (bytes(name).length == 0) revert EmptyName();
@@ -146,8 +152,63 @@ contract Election is AccessControl {
         emit CandidateAdded(electionId, candidateId, name);
     }
 
+    function updateElection(uint256 electionId, string calldata name, string calldata description)
+        external onlyRole(ADMIN_ROLE)
+    {
+        if (bytes(name).length == 0) revert EmptyName();
+        ElectionData storage e = _election(electionId);
+        if (e.deleted) revert ElectionNotFound();
+        e.name        = name;
+        e.description = description;
+        emit ElectionUpdated(electionId, name, description);
+    }
+
+    function deleteElection(uint256 electionId) external onlyRole(ADMIN_ROLE) {
+        ElectionData storage e = _election(electionId);
+        if (e.deleted)                   revert ElectionNotFound();
+        if (e.state != State.NotStarted) revert ElectionAlreadyStarted();
+        e.deleted = true;
+        emit ElectionRemoved(electionId);
+    }
+
+    function updateCandidate(
+        uint256 electionId,
+        uint256 candidateId,
+        string calldata name,
+        string calldata description,
+        string calldata imageUrl
+    ) external onlyRole(ADMIN_ROLE) {
+        if (bytes(name).length == 0) revert EmptyName();
+        ElectionData storage e = _election(electionId);
+        if (e.deleted) revert ElectionNotFound();
+        if (candidateId >= e.candidateCount) revert CandidateNotFound();
+        Candidate storage c = e.candidates[candidateId];
+        c.name        = name;
+        c.description = description;
+        c.imageUrl    = imageUrl;
+        emit CandidateUpdated(electionId, candidateId, name);
+    }
+
+    function deleteCandidate(uint256 electionId, uint256 candidateId)
+        external onlyRole(ADMIN_ROLE)
+    {
+        ElectionData storage e = _election(electionId);
+        if (e.deleted)                   revert ElectionNotFound();
+        if (e.state != State.NotStarted) revert ElectionAlreadyStarted();
+        if (candidateId >= e.candidateCount) revert CandidateNotFound();
+        uint256 last = e.candidateCount - 1;
+        if (candidateId != last) {
+            Candidate storage lastCand = e.candidates[last];
+            e.candidates[candidateId] = Candidate(candidateId, lastCand.name, lastCand.description, lastCand.imageUrl, 0);
+        }
+        delete e.candidates[last];
+        e.candidateCount--;
+        emit CandidateRemoved(electionId, candidateId);
+    }
+
     function startElection(uint256 electionId) external onlyRole(ADMIN_ROLE) {
         ElectionData storage e = _election(electionId);
+        if (e.deleted)                   revert ElectionNotFound();
         if (e.state != State.NotStarted) revert ElectionAlreadyStarted();
         if (e.candidateCount == 0)       revert NoCandidates();
         e.state = State.Open;
@@ -156,6 +217,7 @@ contract Election is AccessControl {
 
     function endElection(uint256 electionId) external onlyRole(ADMIN_ROLE) {
         ElectionData storage e = _election(electionId);
+        if (e.deleted)             revert ElectionNotFound();
         if (e.state != State.Open) revert ElectionNotOpen();
         e.state = State.Ended;
         emit ElectionEnded(electionId);
@@ -167,6 +229,7 @@ contract Election is AccessControl {
 
     function vote(uint256 electionId, uint256 candidateId) external {
         ElectionData storage e = _election(electionId);
+        if (e.deleted)                                        revert ElectionNotFound();
         if (e.state != State.Open)                           revert ElectionNotOpen();
         if (!registry.isAuthorized(electionId, msg.sender))  revert VoterNotAuthorized();
         if (e.hasVoted[msg.sender])                          revert AlreadyVoted();
@@ -191,11 +254,12 @@ contract Election is AccessControl {
             address creator,
             State state,
             uint256 candidateCount,
-            uint256 totalVotes
+            uint256 totalVotes,
+            bool deleted
         )
     {
         ElectionData storage e = _election(electionId);
-        return (e.id, e.name, e.description, e.creator, e.state, e.candidateCount, e.totalVotes);
+        return (e.id, e.name, e.description, e.creator, e.state, e.candidateCount, e.totalVotes, e.deleted);
     }
 
     function getCandidate(uint256 electionId, uint256 candidateId)

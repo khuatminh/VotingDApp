@@ -7,7 +7,7 @@ import {IVoterRegistry} from "./interfaces/IVoterRegistry.sol";
 /// @title VoterRegistry
 /// @author Dev A
 /// @notice Per-election voter authorization, guarded by role-based access control.
-/// @dev SKELETON. Every function body either reverts `TODO()` or returns a zero value.
+/// @dev Fully implemented.
 ///      Spec: docs/superpowers/specs/2026-04-25-voting-dapp-design.md §4.2
 contract VoterRegistry is IVoterRegistry, AccessControl {
     // ---------------------------------------------------------------------
@@ -22,15 +22,7 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     // Storage
     // ---------------------------------------------------------------------
 
-    // TODO(Dev A): (electionId => (voter => authorized?))
-    // mapping(uint256 => mapping(address => bool)) private _authorized;
-
-    // ---------------------------------------------------------------------
-    // Skeleton sentinel
-    // ---------------------------------------------------------------------
-
-    /// @dev Placeholder error used by unimplemented skeletons. Remove when filling in.
-    error TODO();
+    mapping(uint256 => mapping(address => bool)) private _authorized;
 
     // ---------------------------------------------------------------------
     // Constructor
@@ -39,13 +31,12 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     /// @param initialAdmins Addresses seeded with DEFAULT_ADMIN_ROLE + ADMIN_ROLE.
     ///        Must be non-empty; every element must be non-zero. See spec §4.2.
     constructor(address[] memory initialAdmins) {
-        // TODO(Dev A):
-        //   1. require initialAdmins.length > 0
-        //   2. for each admin:
-        //      - revert ZeroAddress() if admin == address(0)
-        //      - _grantRole(DEFAULT_ADMIN_ROLE, admin)
-        //      - _grantRole(ADMIN_ROLE, admin)
-        initialAdmins; // silence unused-var warning in skeleton
+        if (initialAdmins.length == 0) revert NotAdmin();
+        for (uint256 i = 0; i < initialAdmins.length; i++) {
+            if (initialAdmins[i] == address(0)) revert ZeroAddress();
+            _grantRole(DEFAULT_ADMIN_ROLE, initialAdmins[i]);
+            _grantRole(ADMIN_ROLE, initialAdmins[i]);
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -55,36 +46,35 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     /// @inheritdoc IVoterRegistry
     function authorizeVoter(uint256 electionId, address voter)
         external
-        /* onlyRole(ADMIN_ROLE) */
+        onlyRole(ADMIN_ROLE)
     {
-        // TODO(Dev A):
-        //   - require msg.sender has ADMIN_ROLE (use onlyRole or revert NotAdmin)
-        //   - require voter != address(0) (ZeroAddress)
-        //   - require !_authorized[electionId][voter] (AlreadyAuthorized)
-        //   - set _authorized[electionId][voter] = true
-        //   - emit VoterAuthorized(electionId, voter, msg.sender)
-        electionId; voter;
-        revert TODO();
+        if (voter == address(0)) revert ZeroAddress();
+        if (_authorized[electionId][voter]) revert AlreadyAuthorized();
+        _authorized[electionId][voter] = true;
+        emit VoterAuthorized(electionId, voter, msg.sender);
     }
 
     /// @inheritdoc IVoterRegistry
     function revokeVoter(uint256 electionId, address voter)
         external
-        /* onlyRole(ADMIN_ROLE) */
+        onlyRole(ADMIN_ROLE)
     {
-        // TODO(Dev A): mirror of authorizeVoter; require currently authorized, emit VoterRevoked.
-        electionId; voter;
-        revert TODO();
+        if (!_authorized[electionId][voter]) revert NotAuthorized();
+        _authorized[electionId][voter] = false;
+        emit VoterRevoked(electionId, voter, msg.sender);
     }
 
     /// @inheritdoc IVoterRegistry
     function authorizeVoters(uint256 electionId, address[] calldata voters)
         external
-        /* onlyRole(ADMIN_ROLE) */
+        onlyRole(ADMIN_ROLE)
     {
-        // TODO(Dev A): loop over voters; revert on first ZeroAddress or AlreadyAuthorized.
-        electionId; voters;
-        revert TODO();
+        for (uint256 i = 0; i < voters.length; i++) {
+            if (voters[i] == address(0)) revert ZeroAddress();
+            if (_authorized[electionId][voters[i]]) revert AlreadyAuthorized();
+            _authorized[electionId][voters[i]] = true;
+            emit VoterAuthorized(electionId, voters[i], msg.sender);
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -93,9 +83,7 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
 
     /// @inheritdoc IVoterRegistry
     function isAuthorized(uint256 electionId, address voter) external view returns (bool) {
-        // TODO(Dev A): return _authorized[electionId][voter];
-        electionId; voter;
-        return false;
+        return _authorized[electionId][voter];
     }
 
     // ---------------------------------------------------------------------
@@ -105,8 +93,6 @@ contract VoterRegistry is IVoterRegistry, AccessControl {
     /// @notice Returns true if `account` currently holds ADMIN_ROLE.
     /// @dev Thin wrapper over AccessControl.hasRole so the frontend can call one well-named view.
     function isAdmin(address account) external view returns (bool) {
-        // TODO(Dev A): return hasRole(ADMIN_ROLE, account);
-        account;
-        return false;
+        return hasRole(ADMIN_ROLE, account);
     }
 }
