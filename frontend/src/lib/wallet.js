@@ -36,15 +36,11 @@ export async function getChainId() {
 }
 
 export async function switchChain(chainIdHex) {
-  try {
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: chainIdHex }],
-    });
-  } catch (err) {
-    if (err.code === 4902) throw err; // chain not added — caller handles
-    throw err;
-  }
+  if (!hasMetaMask()) throw new Error('MetaMask not installed');
+  await window.ethereum.request({
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: chainIdHex }],
+  });
 }
 
 export function onAccountOrChainChange(handler) {
