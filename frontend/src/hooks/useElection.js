@@ -1,13 +1,15 @@
 // frontend/src/hooks/useElection.js
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useContract } from './useContract'
 
 export function useElection(filter) {
   const { election, ready } = useContract()
   const [elections, setElections] = useState([])
   const [loading, setLoading] = useState(false)
+  const filterRef = useRef(filter)
+  filterRef.current = filter
 
-  async function load() {
+  const load = useCallback(async function load() {
     if (!ready || !election) return
     setLoading(true)
     try {
@@ -25,7 +27,7 @@ export function useElection(filter) {
           candidateCount: Number(e.candidateCount),
           totalVotes: Number(e.totalVotes),
         }))
-        .filter(e => !filter || filter(e))
+        .filter(e => !filterRef.current || filterRef.current(e))
       setElections(items)
     } catch (err) {
       console.warn('useElection load error:', err)
@@ -33,10 +35,9 @@ export function useElection(filter) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [election, ready])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load() }, [ready])
+  useEffect(() => { load() }, [load])
 
   return { elections, loading, reload: load }
 }
