@@ -10,7 +10,8 @@ export function useElection(filter) {
   filterRef.current = filter
 
   const load = useCallback(async function load() {
-    if (!ready || !election) return
+    if (!ready || !election) { setLoading(false); return }
+    const currentFilter = filterRef.current
     setLoading(true)
     try {
       const count = Number(await election.electionCount())
@@ -27,7 +28,7 @@ export function useElection(filter) {
           candidateCount: Number(e.candidateCount),
           totalVotes: Number(e.totalVotes),
         }))
-        .filter(e => !filterRef.current || filterRef.current(e))
+        .filter(e => !currentFilter || currentFilter(e))
       setElections(items)
     } catch (err) {
       console.warn('useElection load error:', err)
