@@ -23,6 +23,7 @@ export default function ElectionSelector({ elections, selected, onSelect, loadin
       className="input"
       value={selected?.id ?? ''}
       onChange={e => {
+        if (!e.target.value) { onSelect(null); return }
         const id = Number(e.target.value)
         onSelect(elections.find(el => el.id === id) ?? null)
       }}
