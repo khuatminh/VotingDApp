@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 const AVATAR_COLORS = ['#7c5cff', '#ff5cf2', '#3d9fef', '#c2ff3d', '#ff9f3d']
 
 export default function CandidateCard({ candidate, onVote, voted, disabled }) {
+  if (!candidate) return null
   const [imgError, setImgError] = useState(false)
   const avatarColor = AVATAR_COLORS[Number(candidate.id) % AVATAR_COLORS.length]
   const showImg = candidate.imageUrl && !imgError
@@ -46,7 +47,7 @@ export default function CandidateCard({ candidate, onVote, voted, disabled }) {
             Đã bỏ phiếu ✓
           </span>
         ) : (
-          <button className="btn btn-accent" onClick={onVote} disabled={disabled}>
+          <button className="btn btn-accent" type="button" onClick={() => onVote?.(candidate.id)} disabled={disabled}>
             Bỏ phiếu
           </button>
         )}
