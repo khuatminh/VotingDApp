@@ -52,6 +52,7 @@ export default function ResultsPage() {
               // Election just ended — stop polling, fetch winner
               clearInterval(pollRef.current)
               pollRef.current = null
+              setSelectedElection(prev => ({ ...prev, state: ENDED }))
               const sorted = await fetchSorted()
               try {
                 const w = await election.getWinner(el.id)
