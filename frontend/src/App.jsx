@@ -26,7 +26,7 @@ export default function App() {
           <Route path="admin"
             element={<AdminPage pushToast={pushToast} setPendingTx={setPendingTx} />}
           />
-          <Route path="vote"    element={<VotePage />} />
+          <Route path="vote"    element={<VotePage pushToast={pushToast} setPendingTx={setPendingTx} />} />
           <Route path="results" element={<ResultsPage />} />
           <Route path="*"       element={<Navigate to="/vote" replace />} />
         </Route>

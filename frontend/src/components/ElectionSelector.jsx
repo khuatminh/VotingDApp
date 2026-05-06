@@ -1,26 +1,39 @@
-// Dropdown of elections scoped by a `filter` predicate.
-// Spec §5.2–§5.4. Skeleton: does not yet fetch from chain.
-//
-// Props:
-//   - value: number | null          (selected electionId)
-//   - onChange: (id: number) => void
-//   - filter?: (e: ElectionSummary) => boolean   (defaults to "all")
-//
-// ElectionSummary shape: { id, name, state }
+// frontend/src/components/ElectionSelector.jsx
+import React from 'react'
 
-export default function ElectionSelector({ value, onChange, filter }) {
-  // TODO(Dev B):
-  //   - Use useContract().election to:
-  //       * read electionCount
-  //       * for each id, call getElection(id) → push into list
-  //       * cache via useEffect on (election address, chainId)
-  //   - Apply `filter` if provided.
-  //   - Render <select>.
-  //   - Handle loading / empty states.
-  value; onChange; filter;
+const STATE_LABELS = { 0: 'NotStarted', 1: 'Ended', 2: 'Open' }
+
+export default function ElectionSelector({ elections, selected, onSelect, loading }) {
+  if (loading) {
+    return (
+      <select className="input" disabled>
+        <option>Đang tải…</option>
+      </select>
+    )
+  }
+  if (!elections || !elections.length) {
+    return (
+      <select className="input" disabled>
+        <option>Không có cuộc bầu cử nào</option>
+      </select>
+    )
+  }
   return (
-    <select disabled>
-      <option>TODO: load elections</option>
+    <select
+      className="input"
+      value={selected?.id ?? ''}
+      onChange={e => {
+        if (!e.target.value) { onSelect(null); return }
+        const id = Number(e.target.value)
+        onSelect(elections.find(el => el.id === id) ?? null)
+      }}
+    >
+      <option value="">— Chọn cuộc bầu cử —</option>
+      {elections.map(el => (
+        <option key={el.id} value={el.id}>
+          {el.name} [{STATE_LABELS[el.state] ?? el.state}]
+        </option>
+      ))}
     </select>
-  );
+  )
 }

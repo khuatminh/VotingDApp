@@ -1,28 +1,57 @@
-// Displays one candidate: image, name, description, current vote count.
-//
-// Props:
-//   - candidate: { id, name, description, imageUrl, voteCount }
-//   - onVote?: (candidateId: number) => Promise<void>
-//   - disabled?: boolean   (already voted / not open / not authorized)
+// frontend/src/components/CandidateCard.jsx
+import React, { useState } from 'react'
 
-export default function CandidateCard({ candidate, onVote, disabled }) {
-  // TODO(Dev B):
-  //   - Render <img src={candidate.imageUrl}> with a fallback for empty/broken URLs.
-  //   - Show vote count formatted as integer (BigInt coming in from ethers).
-  //   - Button labelled "Vote" calls onVote(candidate.id); hide/disable per `disabled`.
+const AVATAR_COLORS = ['#7c5cff', '#ff5cf2', '#3d9fef', '#c2ff3d', '#ff9f3d']
+
+export default function CandidateCard({ candidate, onVote, voted, disabled }) {
+  const [imgError, setImgError] = useState(false)
+  if (!candidate) return null
+  const avatarColor = AVATAR_COLORS[Number(candidate.id) % AVATAR_COLORS.length]
+  const showImg = candidate.imageUrl && !imgError
+
   return (
-    <article className="candidate-card">
-      <div className="candidate-card__image-placeholder">image</div>
-      <h3>{candidate?.name ?? 'TODO name'}</h3>
-      <p>{candidate?.description ?? 'TODO description'}</p>
-      <p>Votes: {String(candidate?.voteCount ?? 0)}</p>
-      <button
-        type="button"
-        onClick={() => onVote?.(candidate?.id)}
-        disabled={disabled}
-      >
-        Vote
-      </button>
-    </article>
-  );
+    <div className="row-card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {showImg ? (
+        <img
+          src={candidate.imageUrl}
+          alt={candidate.name}
+          onError={() => setImgError(true)}
+          style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+        />
+      ) : (
+        <div style={{
+          width: 40, height: 40, borderRadius: '50%',
+          background: avatarColor, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18,
+        }}>
+          👤
+        </div>
+      )}
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: '#fff', fontWeight: 'bold', fontSize: '0.9rem' }}>
+          {candidate.name}
+        </div>
+        <div style={{
+          color: '#888', fontSize: '0.8rem',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {candidate.description}
+        </div>
+      </div>
+
+      <div style={{ flexShrink: 0 }}>
+        {voted ? (
+          <span style={{ color: '#c2ff3d', fontSize: '0.85rem', fontWeight: 'bold' }}>
+            Đã bỏ phiếu ✓
+          </span>
+        ) : (
+          <button className="btn btn-accent" type="button" onClick={() => onVote?.(candidate.id)} disabled={disabled}>
+            Bỏ phiếu
+          </button>
+        )}
+      </div>
+    </div>
+  )
 }
