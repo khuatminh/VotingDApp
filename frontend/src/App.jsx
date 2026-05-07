@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import Layout          from './components/Layout.jsx';
-import AdminPage       from './pages/AdminPage.jsx';
-import VotePage        from './pages/VotePage.jsx';
-import ResultsPage     from './pages/ResultsPage.jsx';
-import Toasts          from './components/Toasts.jsx';
-import PendingTxRibbon from './components/PendingTxRibbon.jsx';
+import Layout              from './components/Layout.jsx';
+import AdminPage           from './pages/AdminPage.jsx';
+import ElectionListPage    from './pages/ElectionListPage.jsx';
+import ElectionDetailPage  from './pages/ElectionDetailPage.jsx';
+import ResultsPage         from './pages/ResultsPage.jsx';
+import Toasts              from './components/Toasts.jsx';
+import PendingTxRibbon     from './components/PendingTxRibbon.jsx';
 
 export default function App() {
   const [toasts, setToasts]       = useState([]);
@@ -26,9 +27,12 @@ export default function App() {
           <Route path="admin"
             element={<AdminPage pushToast={pushToast} setPendingTx={setPendingTx} />}
           />
-          <Route path="vote"    element={<VotePage pushToast={pushToast} setPendingTx={setPendingTx} />} />
+          <Route path="vote" element={<ElectionListPage />} />
+          <Route path="vote/:id"
+            element={<ElectionDetailPage pushToast={pushToast} setPendingTx={setPendingTx} />}
+          />
           <Route path="results" element={<ResultsPage />} />
-          <Route path="*"       element={<Navigate to="/vote" replace />} />
+          <Route path="*" element={<Navigate to="/vote" replace />} />
         </Route>
       </Routes>
       <Toasts toasts={toasts} />
