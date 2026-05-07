@@ -400,3 +400,46 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
   min-width: 18px; height: 18px; padding: 0 4px; border-radius: 100px;
   background: rgba(0,0,0,.12); font-size: 10px;
 }
+
+/* --- Election detail header --- */
+.stat-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 12px; margin-top: 16px;
+}
+@media (max-width: 600px) {
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+}
+.stat-tile {
+  background: var(--surface, #1a1a1a); border: 1px solid var(--line, #333);
+  border-radius: 8px; padding: 12px;
+}
+.stat-tile .label {
+  font-size: 11px; color: var(--ink-3, #888);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.stat-tile .value {
+  font-size: 18px; color: #fff; font-weight: 600; margin-top: 4px;
+}
+.your-vote-row {
+  margin-top: 12px; padding: 10px 12px;
+  background: rgba(194, 255, 61, 0.08);
+  border-left: 3px solid var(--accent, #c2ff3d);
+  border-radius: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+.distribution-row {
+  display: grid; grid-template-columns: 120px 1fr 50px;
+  align-items: center; gap: 10px; font-size: 13px;
+}
+.distribution-row .name {
+  color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.distribution-row .bar {
+  height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden;
+}
+.distribution-row .bar .fill {
+  height: 100%; background: var(--accent, #c2ff3d); transition: width 0.4s ease;
+}
+.distribution-row .pct {
+  color: var(--ink-3, #888); font-size: 12px; text-align: right;
+}
