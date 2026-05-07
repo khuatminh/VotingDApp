@@ -74,6 +74,9 @@ export default function ElectionDetailPage({ pushToast, setPendingTx }) {
         <p style={{ color: '#f55', marginTop: 16 }}>
           {error || 'Election not found.'}
         </p>
+        <button className="btn btn-sm" type="button" onClick={reload}>
+          Thử lại
+        </button>
       </div>
     );
   }

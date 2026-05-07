@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const STATE_LABELS = { 0: 'NotStarted', 1: 'Open', 2: 'Ended' };
 
@@ -42,6 +42,16 @@ export default function ElectionListCard({ election }) {
         📊 {totalVotes} vote{totalVotes !== 1 ? 's' : ''} ·{' '}
         👥 {candidateCount} candidate{candidateCount !== 1 ? 's' : ''}
       </div>
+      {state === 2 && (
+        <div style={{ marginTop: 8 }}>
+          <Link
+            to="/results"
+            style={{ color: 'var(--accent)', fontSize: 12, textDecoration: 'none' }}
+          >
+            View results →
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

@@ -410,7 +410,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
   .stat-row { grid-template-columns: repeat(2, 1fr); }
 }
 .stat-tile {
-  background: var(--surface, #1a1a1a); border: 1px solid var(--line, #333);
+  background: var(--card-solid); border: 1px solid var(--line, #333);
   border-radius: 8px; padding: 12px;
 }
 .stat-tile .label {
@@ -448,7 +448,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 .candidate-card {
   display: flex; flex-direction: column; align-items: center;
   gap: 8px; padding: 16px;
-  background: var(--surface, #1a1a1a); border: 1px solid var(--line, #333);
+  background: var(--card-solid); border: 1px solid var(--line, #333);
   border-radius: 10px; cursor: pointer;
   transition: border-color 0.15s ease, transform 0.05s ease;
 }
@@ -495,7 +495,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 .modal {
   position: relative;
   width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto;
-  background: var(--surface, #1a1a1a); border: 1px solid var(--line, #333);
+  background: var(--card-solid); border: 1px solid var(--line, #333);
   border-radius: 12px; padding: 24px;
 }
 .modal__close {
