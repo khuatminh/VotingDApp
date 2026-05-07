@@ -522,3 +522,10 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
   border-top: 1px solid var(--line, #333);
   display: flex; justify-content: center;
 }
+
+/* --- Back link --- */
+.back-link {
+  display: inline-block; color: var(--ink-3, #888); font-size: 13px;
+  text-decoration: none; margin-bottom: 12px;
+}
+.back-link:hover { color: #fff; }
