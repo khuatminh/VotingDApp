@@ -24,7 +24,7 @@ export function useElection(filter) {
           id: Number(e.id),
           name: e.name,
           description: e.description,
-          state: Number(e.state),       // 0=NotStarted 1=Ended 2=Open
+          state: Number(e.state),       // 0=NotStarted 1=Open 2=Ended
           candidateCount: Number(e.candidateCount),
           totalVotes: Number(e.totalVotes),
         }))

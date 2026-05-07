@@ -6,8 +6,8 @@ import ElectionSelector from '../components/ElectionSelector'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 const NOT_STARTED = 0
-const ENDED = 1
-const OPEN = 2
+const OPEN = 1
+const ENDED = 2
 const POLL_MS = 5000
 
 export default function ResultsPage() {

@@ -1,0 +1,94 @@
+<h2>How should candidate detail be revealed?</h2>
+<p class="subtitle">Click a card on the grid to see the full bio. Pick the interaction model.</p>
+
+<div class="cards">
+  <div class="card" data-choice="modal" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="background:#1a1a1a;padding:8px;">
+        <div class="mockup-header" style="font-size:11px;">/vote/3 &mdash; election detail page</div>
+        <div class="mockup-body" style="position:relative;padding:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;opacity:0.35;">
+            <div class="placeholder" style="height:60px;">card</div>
+            <div class="placeholder" style="height:60px;">card</div>
+            <div class="placeholder" style="height:60px;">card</div>
+            <div class="placeholder" style="height:60px;">card</div>
+            <div class="placeholder" style="height:60px;">card</div>
+            <div class="placeholder" style="height:60px;">card</div>
+          </div>
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;">
+            <div style="background:#222;border:1px solid #444;border-radius:8px;padding:12px;width:75%;">
+              <div style="display:flex;gap:8px;margin-bottom:6px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:#7c5cff;"></div>
+                <div>
+                  <div style="font-weight:bold;font-size:11px;">Candidate Name</div>
+                  <div style="font-size:9px;color:#888;">"Slogan goes here"</div>
+                </div>
+              </div>
+              <div class="placeholder" style="height:40px;font-size:9px;">Bio paragraph</div>
+              <button class="mock-button" style="margin-top:6px;font-size:9px;">Bỏ phiếu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A &mdash; Modal overlay</h3>
+      <p>Click card &rarr; modal pops up with bio + Vote button. Stays on the same page; easy to close. Most familiar UX.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="expand" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="background:#1a1a1a;padding:8px;">
+        <div class="mockup-header" style="font-size:11px;">/vote/3 &mdash; expand inline</div>
+        <div class="mockup-body" style="padding:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+            <div class="placeholder" style="height:50px;">card</div>
+            <div class="placeholder" style="height:50px;">card</div>
+            <div class="placeholder" style="height:50px;">card</div>
+          </div>
+          <div style="background:#2a2a2a;border:1px solid #555;border-radius:6px;padding:8px;margin-top:6px;">
+            <div style="display:flex;gap:8px;margin-bottom:4px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:#ff5cf2;"></div>
+              <div style="font-weight:bold;font-size:11px;">Selected candidate &mdash; bio</div>
+            </div>
+            <div class="placeholder" style="height:30px;font-size:9px;">Full bio + slogan + vote button inline</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
+            <div class="placeholder" style="height:50px;">card</div>
+            <div class="placeholder" style="height:50px;">card</div>
+            <div class="placeholder" style="height:50px;">card</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B &mdash; Expand inline</h3>
+      <p>Click a card &rarr; the row containing it expands beneath, pushing other cards down. No overlay. Feels integrated.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="route" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup" style="background:#1a1a1a;padding:8px;">
+        <div class="mockup-header" style="font-size:11px;">/vote/3/candidate/2 &mdash; full page</div>
+        <div class="mockup-body" style="padding:10px;">
+          <div style="font-size:10px;color:#888;margin-bottom:6px;">&larr; Back to election</div>
+          <div style="display:flex;gap:10px;">
+            <div style="width:60px;height:60px;border-radius:6px;background:#3d9fef;flex-shrink:0;"></div>
+            <div style="flex:1;">
+              <div style="font-weight:bold;font-size:13px;">Candidate Name</div>
+              <div style="font-size:10px;color:#888;font-style:italic;">"Slogan goes here"</div>
+              <div class="placeholder" style="height:50px;font-size:9px;margin-top:6px;">Long bio paragraph</div>
+              <button class="mock-button" style="margin-top:6px;font-size:10px;">Bỏ phiếu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C &mdash; Dedicated route</h3>
+      <p>Click card &rarr; navigate to /vote/:eid/candidate/:cid. Full page for bio. Shareable URL, but more clicks to compare candidates.</p>
+    </div>
+  </div>
+</div>
