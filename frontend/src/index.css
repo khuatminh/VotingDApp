@@ -477,3 +477,10 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 .candidate-card__voted {
   color: var(--accent, #c2ff3d); font-size: 13px; font-weight: 600;
 }
+
+/* --- Candidate grid container --- */
+.candidate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
