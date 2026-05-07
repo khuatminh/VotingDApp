@@ -80,7 +80,9 @@ export default function AdminPage({ pushToast, setPendingTx }) {
       [electionId]: results.map(c => ({
         id:          Number(c.id),
         name:        c.name,
+        slogan:      c.slogan,
         description: c.description,
+        bio:         c.bio,
         imageUrl:    c.imageUrl,
         voteCount:   Number(c.voteCount),
       })),
@@ -181,7 +183,9 @@ function ElectionsTab({
   // Add candidate
   const [addCandFor, setAddCandFor] = useState(null);
   const [cName, setCName]           = useState('');
+  const [cSlogan, setCSlogan]       = useState('');
   const [cDesc, setCDesc]           = useState('');
+  const [cBio, setCBio]             = useState('');
   const [cImg, setCImg]             = useState('');
   const [addingCand, setAddingCand] = useState(false);
 
@@ -204,7 +208,9 @@ function ElectionsTab({
   // Edit candidate — key is `${electionId}-${candidateId}`
   const [editCandKey, setEditCandKey]   = useState(null);
   const [ecName, setEcName]             = useState('');
+  const [ecSlogan, setEcSlogan]         = useState('');
   const [ecDesc, setEcDesc]             = useState('');
+  const [ecBio, setEcBio]               = useState('');
   const [ecImg, setEcImg]               = useState('');
   const [updatingCand, setUpdatingCand] = useState(null);
 
@@ -221,7 +227,9 @@ function ElectionsTab({
   function openEditCand(eid, c) {
     setEditCandKey(`${eid}-${c.id}`);
     setEcName(c.name);
+    setEcSlogan(c.slogan ?? '');
     setEcDesc(c.description);
+    setEcBio(c.bio ?? '');
     setEcImg(c.imageUrl);
   }
 
@@ -282,7 +290,14 @@ function ElectionsTab({
     if (!cName.trim()) return;
     setAddingCand(true);
     try {
-      const tx = await election.addCandidate(electionId, cName.trim(), cDesc.trim(), cImg.trim());
+      const tx = await election.addCandidate(
+        electionId,
+        cName.trim(),
+        cSlogan.trim(),
+        cDesc.trim(),
+        cBio.trim(),
+        cImg.trim()
+      );
       setPendingTx({ label: `Adding "${cName.trim()}"…`, hash: tx.hash });
       await tx.wait();
       setElections(prev => prev.map(e =>
@@ -290,11 +305,20 @@ function ElectionsTab({
       ));
       setCandidates(prev => {
         if (!prev[electionId]) return prev;
-        const newCand = { id: prev[electionId].length, name: cName.trim(), description: cDesc.trim(), imageUrl: cImg.trim(), voteCount: 0 };
+        const newCand = {
+          id: prev[electionId].length,
+          name: cName.trim(),
+          slogan: cSlogan.trim(),
+          description: cDesc.trim(),
+          bio: cBio.trim(),
+          imageUrl: cImg.trim(),
+          voteCount: 0,
+        };
         return { ...prev, [electionId]: [...prev[electionId], newCand] };
       });
       pushToast('Candidate added', 'success');
-      setCName(''); setCDesc(''); setCImg(''); setAddCandFor(null);
+      setCName(''); setCSlogan(''); setCDesc(''); setCBio(''); setCImg('');
+      setAddCandFor(null);
     } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
     finally { setAddingCand(false); setPendingTx(null); }
   }
@@ -304,14 +328,24 @@ function ElectionsTab({
     const key = `${electionId}-${candidateId}`;
     setUpdatingCand(key);
     try {
-      const tx = await election.updateCandidate(electionId, candidateId, ecName.trim(), ecDesc.trim(), ecImg.trim());
+      const tx = await election.updateCandidate(
+        electionId, candidateId,
+        ecName.trim(), ecSlogan.trim(), ecDesc.trim(), ecBio.trim(), ecImg.trim()
+      );
       setPendingTx({ label: 'Updating candidate…', hash: tx.hash });
       await tx.wait();
       setCandidates(prev => ({
         ...prev,
         [electionId]: (prev[electionId] ?? []).map(c =>
           c.id === candidateId
-            ? { ...c, name: ecName.trim(), description: ecDesc.trim(), imageUrl: ecImg.trim() }
+            ? {
+                ...c,
+                name: ecName.trim(),
+                slogan: ecSlogan.trim(),
+                description: ecDesc.trim(),
+                bio: ecBio.trim(),
+                imageUrl: ecImg.trim(),
+              }
             : c
         ),
       }));
@@ -482,22 +516,35 @@ function ElectionsTab({
             {addCandFor === e.id && (
               <div className="form-card" style={{ marginTop: 8 }}>
                 <div className="eyebrow mb-12">Add candidate</div>
-                <div className="grid-3">
+                <div className="grid-2">
                   <div className="field">
                     <label>Name</label>
                     <input className="input" value={cName} onChange={ev => setCName(ev.target.value)}
                       placeholder="Full name" />
                   </div>
                   <div className="field">
+                    <label>Slogan</label>
+                    <input className="input" value={cSlogan} onChange={ev => setCSlogan(ev.target.value)}
+                      placeholder="One-line tagline (~60 chars)" />
+                  </div>
+                </div>
+                <div className="grid-2" style={{ marginTop: 12 }}>
+                  <div className="field">
                     <label>Description</label>
                     <input className="input" value={cDesc} onChange={ev => setCDesc(ev.target.value)}
-                      placeholder="One-line platform" />
+                      placeholder="Short summary" />
                   </div>
                   <div className="field">
                     <label>Image URL</label>
                     <input className="input" value={cImg} onChange={ev => setCImg(ev.target.value)}
                       placeholder="https://…" />
                   </div>
+                </div>
+                <div className="field" style={{ marginTop: 12 }}>
+                  <label>Bio</label>
+                  <textarea className="textarea" rows={6} value={cBio}
+                    onChange={ev => setCBio(ev.target.value)}
+                    placeholder="Long-form biography. Paragraph breaks preserved." />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
                   <button className="btn btn-sm" onClick={() => setAddCandFor(null)}>Cancel</button>
@@ -558,12 +605,19 @@ function ElectionsTab({
                         {/* Edit candidate form */}
                         {editCandKey === `${e.id}-${c.id}` && (
                           <div className="form-card" style={{ marginTop: 8 }}>
-                            <div className="grid-3">
+                            <div className="grid-2">
                               <div className="field">
                                 <label>Name</label>
                                 <input className="input" value={ecName}
                                   onChange={ev => setEcName(ev.target.value)} />
                               </div>
+                              <div className="field">
+                                <label>Slogan</label>
+                                <input className="input" value={ecSlogan}
+                                  onChange={ev => setEcSlogan(ev.target.value)} />
+                              </div>
+                            </div>
+                            <div className="grid-2" style={{ marginTop: 12 }}>
                               <div className="field">
                                 <label>Description</label>
                                 <input className="input" value={ecDesc}
@@ -575,6 +629,11 @@ function ElectionsTab({
                                   onChange={ev => setEcImg(ev.target.value)}
                                   placeholder="https://…" />
                               </div>
+                            </div>
+                            <div className="field" style={{ marginTop: 12 }}>
+                              <label>Bio</label>
+                              <textarea className="textarea" rows={6} value={ecBio}
+                                onChange={ev => setEcBio(ev.target.value)} />
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
                               <button className="btn btn-sm" onClick={() => setEditCandKey(null)}>Cancel</button>
