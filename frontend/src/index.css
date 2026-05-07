@@ -443,3 +443,37 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 .distribution-row .pct {
   color: var(--ink-3, #888); font-size: 12px; text-align: right;
 }
+
+/* --- Candidate grid card --- */
+.candidate-card {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 16px;
+  background: var(--surface, #1a1a1a); border: 1px solid var(--line, #333);
+  border-radius: 10px; cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.05s ease;
+}
+.candidate-card:hover { border-color: var(--ink-3, #888); }
+.candidate-card:active { transform: translateY(1px); }
+.candidate-card.voted {
+  border-color: var(--accent, #c2ff3d);
+  box-shadow: 0 0 0 1px var(--accent, #c2ff3d);
+}
+.candidate-card__avatar {
+  width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
+}
+.candidate-card__avatar--fallback {
+  display: flex; align-items: center; justify-content: center; font-size: 32px;
+}
+.candidate-card__name {
+  color: #fff; font-weight: 600; font-size: 15px;
+  text-align: center; margin-top: 4px;
+}
+.candidate-card__slogan {
+  color: var(--ink-3, #888); font-size: 13px; font-style: italic;
+  text-align: center; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.candidate-card__action { margin-top: 8px; }
+.candidate-card__voted {
+  color: var(--accent, #c2ff3d); font-size: 13px; font-weight: 600;
+}
