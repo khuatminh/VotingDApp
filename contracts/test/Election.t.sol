@@ -170,6 +170,37 @@ contract ElectionTest is Test {
         election.addCandidate(0, "", "", "bio", "", "");
     }
 
+    function test_addCandidate_persistsSloganAndBio() public {
+        vm.prank(admin);
+        election.createElection("E", "desc");
+
+        vm.prank(admin);
+        election.addCandidate(0, "Alice", "Together we rise", "Short desc", "Long bio paragraph", "http://img/a.jpg");
+
+        Election.Candidate memory c = election.getCandidate(0, 0);
+        assertEq(c.name, "Alice");
+        assertEq(c.slogan, "Together we rise");
+        assertEq(c.description, "Short desc");
+        assertEq(c.bio, "Long bio paragraph");
+        assertEq(c.imageUrl, "http://img/a.jpg");
+    }
+
+    // ----- updateCandidate -----------------------------------------------
+
+    function test_updateCandidate_changesSloganAndBio() public {
+        vm.startPrank(admin);
+        election.createElection("E", "desc");
+        election.addCandidate(0, "Alice", "old slogan", "old desc", "old bio", "");
+        election.updateCandidate(0, 0, "Alice", "new slogan", "new desc", "new bio", "http://x");
+        vm.stopPrank();
+
+        Election.Candidate memory c = election.getCandidate(0, 0);
+        assertEq(c.slogan, "new slogan");
+        assertEq(c.description, "new desc");
+        assertEq(c.bio, "new bio");
+        assertEq(c.imageUrl, "http://x");
+    }
+
     // ----- lifecycle -----------------------------------------------------
 
     function test_startElection_happyPath() public {
@@ -316,6 +347,21 @@ contract ElectionTest is Test {
         assertEq(results[1].name, "Bob");
         assertEq(results[0].id, 0);
         assertEq(results[1].id, 1);
+    }
+
+    function test_getResults_includesSloganAndBio() public {
+        vm.startPrank(admin);
+        election.createElection("E", "desc");
+        election.addCandidate(0, "Alice", "slogan A", "desc A", "bio A", "");
+        election.addCandidate(0, "Bob",   "slogan B", "desc B", "bio B", "");
+        vm.stopPrank();
+
+        Election.Candidate[] memory results = election.getResults(0);
+        assertEq(results.length, 2);
+        assertEq(results[0].slogan, "slogan A");
+        assertEq(results[0].bio, "bio A");
+        assertEq(results[1].slogan, "slogan B");
+        assertEq(results[1].bio, "bio B");
     }
 
     function test_getWinner_revertsWhenNotEnded() public {
