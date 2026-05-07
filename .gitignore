@@ -23,3 +23,6 @@ node_modules/
 # Frontend ABIs are auto-synced; only addresses.json is committed
 frontend/src/contracts/*.json
 !frontend/src/contracts/addresses.json
+
+# Superpowers ephemeral state (brainstorm mockups, agent state)
+.superpowers/
