@@ -27,7 +27,9 @@ contract Election is AccessControl {
     struct Candidate {
         uint256 id;
         string  name;
+        string  slogan;
         string  description;
+        string  bio;
         string  imageUrl;
         uint256 voteCount;
     }
@@ -139,7 +141,9 @@ contract Election is AccessControl {
     function addCandidate(
         uint256 electionId,
         string calldata name,
+        string calldata slogan,
         string calldata description,
+        string calldata bio,
         string calldata imageUrl
     ) external onlyRole(ADMIN_ROLE) returns (uint256 candidateId) {
         ElectionData storage e = _election(electionId);
@@ -148,7 +152,7 @@ contract Election is AccessControl {
         if (e.state == State.Ended)  revert ElectionAlreadyEnded();
         if (bytes(name).length == 0) revert EmptyName();
         candidateId = e.candidateCount++;
-        e.candidates[candidateId] = Candidate(candidateId, name, description, imageUrl, 0);
+        e.candidates[candidateId] = Candidate(candidateId, name, slogan, description, bio, imageUrl, 0);
         emit CandidateAdded(electionId, candidateId, name);
     }
 
@@ -175,7 +179,9 @@ contract Election is AccessControl {
         uint256 electionId,
         uint256 candidateId,
         string calldata name,
+        string calldata slogan,
         string calldata description,
+        string calldata bio,
         string calldata imageUrl
     ) external onlyRole(ADMIN_ROLE) {
         if (bytes(name).length == 0) revert EmptyName();
@@ -184,7 +190,9 @@ contract Election is AccessControl {
         if (candidateId >= e.candidateCount) revert CandidateNotFound();
         Candidate storage c = e.candidates[candidateId];
         c.name        = name;
+        c.slogan      = slogan;
         c.description = description;
+        c.bio         = bio;
         c.imageUrl    = imageUrl;
         emit CandidateUpdated(electionId, candidateId, name);
     }
@@ -199,7 +207,15 @@ contract Election is AccessControl {
         uint256 last = e.candidateCount - 1;
         if (candidateId != last) {
             Candidate storage lastCand = e.candidates[last];
-            e.candidates[candidateId] = Candidate(candidateId, lastCand.name, lastCand.description, lastCand.imageUrl, 0);
+            e.candidates[candidateId] = Candidate(
+                candidateId,
+                lastCand.name,
+                lastCand.slogan,
+                lastCand.description,
+                lastCand.bio,
+                lastCand.imageUrl,
+                0
+            );
         }
         delete e.candidates[last];
         e.candidateCount--;
