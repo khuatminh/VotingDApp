@@ -70,7 +70,7 @@ contract ElectionTest is Test {
     function _createWithCandidate() internal returns (uint256 electionId) {
         vm.startPrank(admin);
         electionId = election.createElection("E", "desc");
-        election.addCandidate(electionId, "Alice", "bio", "");
+        election.addCandidate(electionId, "Alice", "", "bio", "", "");
         vm.stopPrank();
     }
 
@@ -131,7 +131,7 @@ contract ElectionTest is Test {
         vm.prank(admin);
         vm.expectEmit(true, true, false, true);
         emit Election.CandidateAdded(0, 0, "Alice");
-        uint256 candidateId = election.addCandidate(0, "Alice", "bio", "http://img.com/alice.jpg");
+        uint256 candidateId = election.addCandidate(0, "Alice", "", "bio", "", "http://img.com/alice.jpg");
 
         assertEq(candidateId, 0);
         Election.Candidate memory c = election.getCandidate(0, 0);
@@ -149,7 +149,7 @@ contract ElectionTest is Test {
 
         vm.prank(admin);
         vm.expectRevert(Election.ElectionAlreadyStarted.selector);
-        election.addCandidate(eid, "Bob", "bio", "");
+        election.addCandidate(eid, "Bob", "", "bio", "", "");
     }
 
     function test_addCandidate_revertsWhenNonAdmin() public {
@@ -158,7 +158,7 @@ contract ElectionTest is Test {
 
         vm.prank(other);
         vm.expectRevert();
-        election.addCandidate(0, "Alice", "bio", "");
+        election.addCandidate(0, "Alice", "", "bio", "", "");
     }
 
     function test_addCandidate_revertsOnEmptyName() public {
@@ -167,7 +167,7 @@ contract ElectionTest is Test {
 
         vm.prank(admin);
         vm.expectRevert(Election.EmptyName.selector);
-        election.addCandidate(0, "", "bio", "");
+        election.addCandidate(0, "", "", "bio", "", "");
     }
 
     // ----- lifecycle -----------------------------------------------------
@@ -306,8 +306,8 @@ contract ElectionTest is Test {
     function test_getResults_returnsAllCandidates() public {
         vm.startPrank(admin);
         election.createElection("E", "desc");
-        election.addCandidate(0, "Alice", "bio1", "http://a.com/a.jpg");
-        election.addCandidate(0, "Bob",   "bio2", "http://a.com/b.jpg");
+        election.addCandidate(0, "Alice", "", "bio1", "", "http://a.com/a.jpg");
+        election.addCandidate(0, "Bob",   "", "bio2", "", "http://a.com/b.jpg");
         vm.stopPrank();
 
         Election.Candidate[] memory results = election.getResults(0);
@@ -341,8 +341,8 @@ contract ElectionTest is Test {
     function test_getWinner_tiebreakByLowestId() public {
         vm.startPrank(admin);
         uint256 eid = election.createElection("E", "desc");
-        election.addCandidate(eid, "Alice", "", "");  // id = 0
-        election.addCandidate(eid, "Bob",   "", "");  // id = 1
+        election.addCandidate(eid, "Alice", "", "", "", "");  // id = 0
+        election.addCandidate(eid, "Bob",   "", "", "", "");  // id = 1
         election.startElection(eid);
         vm.stopPrank();
 
@@ -367,11 +367,11 @@ contract ElectionTest is Test {
     function test_multipleElections_isolatedState() public {
         vm.startPrank(admin);
         uint256 eid0 = election.createElection("E0", "d");
-        election.addCandidate(eid0, "Alice",   "", "");
+        election.addCandidate(eid0, "Alice",   "", "", "", "");
         election.startElection(eid0);
 
         uint256 eid1 = election.createElection("E1", "d");
-        election.addCandidate(eid1, "Charlie", "", "");
+        election.addCandidate(eid1, "Charlie", "", "", "", "");
         election.startElection(eid1);
         vm.stopPrank();
 
