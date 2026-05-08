@@ -69,7 +69,7 @@ contract ElectionTest is Test {
     /// @dev Creates election 0 with one candidate ("Alice"). Both admin actions.
     function _createWithCandidate() internal returns (uint256 electionId) {
         vm.startPrank(admin);
-        electionId = election.createElection("E", "desc");
+        electionId = election.createElection("E", "desc", "");
         election.addCandidate(electionId, "Alice", "", "bio", "", "");
         vm.stopPrank();
     }
@@ -80,13 +80,14 @@ contract ElectionTest is Test {
         vm.prank(admin);
         vm.expectEmit(true, true, false, true);
         emit Election.ElectionCreated(0, admin, "Test Election");
-        uint256 id = election.createElection("Test Election", "A description");
+        uint256 id = election.createElection("Test Election", "A description", "");
 
         assertEq(id, 0);
         (
             uint256 eid,
             string memory name,
             string memory desc,
+            string memory thumb,
             address creator,
             Election.State state,
             uint256 cc,
@@ -105,19 +106,19 @@ contract ElectionTest is Test {
     function test_createElection_revertsOnEmptyName() public {
         vm.prank(admin);
         vm.expectRevert(Election.EmptyName.selector);
-        election.createElection("", "desc");
+        election.createElection("", "desc", "");
     }
 
     function test_createElection_revertsWhenNonAdmin() public {
         vm.prank(other);
         vm.expectRevert();
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
     }
 
     function test_createElection_incrementsElectionCount() public {
         vm.startPrank(admin);
-        election.createElection("E1", "d");
-        election.createElection("E2", "d");
+        election.createElection("E1", "d", "");
+        election.createElection("E2", "d", "");
         vm.stopPrank();
         assertEq(election.electionCount(), 2);
     }
@@ -126,7 +127,7 @@ contract ElectionTest is Test {
 
     function test_addCandidate_happyPath() public {
         vm.prank(admin);
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
 
         vm.prank(admin);
         vm.expectEmit(true, true, false, true);
@@ -154,7 +155,7 @@ contract ElectionTest is Test {
 
     function test_addCandidate_revertsWhenNonAdmin() public {
         vm.prank(admin);
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
 
         vm.prank(other);
         vm.expectRevert();
@@ -163,7 +164,7 @@ contract ElectionTest is Test {
 
     function test_addCandidate_revertsOnEmptyName() public {
         vm.prank(admin);
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
 
         vm.prank(admin);
         vm.expectRevert(Election.EmptyName.selector);
@@ -172,7 +173,7 @@ contract ElectionTest is Test {
 
     function test_addCandidate_persistsSloganAndBio() public {
         vm.prank(admin);
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
 
         vm.prank(admin);
         election.addCandidate(0, "Alice", "Together we rise", "Short desc", "Long bio paragraph", "http://img/a.jpg");
@@ -189,7 +190,7 @@ contract ElectionTest is Test {
 
     function test_updateCandidate_changesSloganAndBio() public {
         vm.startPrank(admin);
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
         election.addCandidate(0, "Alice", "old slogan", "old desc", "old bio", "");
         election.updateCandidate(0, 0, "Alice", "new slogan", "new desc", "new bio", "http://x");
         vm.stopPrank();
@@ -211,13 +212,13 @@ contract ElectionTest is Test {
         emit Election.ElectionStarted(eid);
         election.startElection(eid);
 
-        (, , , , Election.State state, , , ) = election.getElection(eid);
+        (, , , , , Election.State state, , , ) = election.getElection(eid);
         assertTrue(state == Election.State.Open);
     }
 
     function test_startElection_revertsWithoutCandidates() public {
         vm.prank(admin);
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
 
         vm.prank(admin);
         vm.expectRevert(Election.NoCandidates.selector);
@@ -244,13 +245,13 @@ contract ElectionTest is Test {
         emit Election.ElectionEnded(eid);
         election.endElection(eid);
 
-        (, , , , Election.State state, , , ) = election.getElection(eid);
+        (, , , , , Election.State state, , , ) = election.getElection(eid);
         assertTrue(state == Election.State.Ended);
     }
 
     function test_endElection_revertsWhenNotOpen() public {
         vm.prank(admin);
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
 
         vm.prank(admin);
         vm.expectRevert(Election.ElectionNotOpen.selector);
@@ -272,7 +273,7 @@ contract ElectionTest is Test {
 
         Election.Candidate memory c = election.getCandidate(eid, 0);
         assertEq(c.voteCount, 1);
-        (, , , , , , uint256 totalVotes, ) = election.getElection(eid);
+        (, , , , , , , uint256 totalVotes, ) = election.getElection(eid);
         assertEq(totalVotes, 1);
     }
 
@@ -336,7 +337,7 @@ contract ElectionTest is Test {
 
     function test_getResults_returnsAllCandidates() public {
         vm.startPrank(admin);
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
         election.addCandidate(0, "Alice", "", "bio1", "", "http://a.com/a.jpg");
         election.addCandidate(0, "Bob",   "", "bio2", "", "http://a.com/b.jpg");
         vm.stopPrank();
@@ -351,7 +352,7 @@ contract ElectionTest is Test {
 
     function test_getResults_includesSloganAndBio() public {
         vm.startPrank(admin);
-        election.createElection("E", "desc");
+        election.createElection("E", "desc", "");
         election.addCandidate(0, "Alice", "slogan A", "desc A", "bio A", "");
         election.addCandidate(0, "Bob",   "slogan B", "desc B", "bio B", "");
         vm.stopPrank();
@@ -386,7 +387,7 @@ contract ElectionTest is Test {
 
     function test_getWinner_tiebreakByLowestId() public {
         vm.startPrank(admin);
-        uint256 eid = election.createElection("E", "desc");
+        uint256 eid = election.createElection("E", "desc", "");
         election.addCandidate(eid, "Alice", "", "", "", "");  // id = 0
         election.addCandidate(eid, "Bob",   "", "", "", "");  // id = 1
         election.startElection(eid);
@@ -412,11 +413,11 @@ contract ElectionTest is Test {
 
     function test_multipleElections_isolatedState() public {
         vm.startPrank(admin);
-        uint256 eid0 = election.createElection("E0", "d");
+        uint256 eid0 = election.createElection("E0", "d", "");
         election.addCandidate(eid0, "Alice",   "", "", "", "");
         election.startElection(eid0);
 
-        uint256 eid1 = election.createElection("E1", "d");
+        uint256 eid1 = election.createElection("E1", "d", "");
         election.addCandidate(eid1, "Charlie", "", "", "", "");
         election.startElection(eid1);
         vm.stopPrank();
@@ -427,8 +428,8 @@ contract ElectionTest is Test {
         vm.prank(voter1);
         election.vote(eid0, 0);
 
-        (, , , , , , uint256 tv0, ) = election.getElection(eid0);
-        (, , , , , , uint256 tv1, ) = election.getElection(eid1);
+        (, , , , , , , uint256 tv0, ) = election.getElection(eid0);
+        (, , , , , , , uint256 tv1, ) = election.getElection(eid1);
         assertEq(tv0, 1);
         assertEq(tv1, 0);
     }
