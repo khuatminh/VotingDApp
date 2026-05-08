@@ -61,7 +61,7 @@ export default function ElectionListPage() {
       ) : filtered.length === 0 ? (
         <p style={{ color: 'var(--ink-3)' }}>Không có cuộc bầu cử nào phù hợp.</p>
       ) : (
-        <div className="col gap-16">
+        <div className="election-grid">
           {filtered.map(el => (
             <ElectionListCard key={el.id} election={el} />
           ))}
