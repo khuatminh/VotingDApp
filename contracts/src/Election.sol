@@ -38,6 +38,7 @@ contract Election is AccessControl {
         uint256 id;
         string  name;
         string  description;
+        string  thumbnailUrl;
         address creator;        // audit-only, never used for authz
         State   state;
         uint256 candidateCount;
@@ -122,7 +123,11 @@ contract Election is AccessControl {
     // ---------------------------------------------------------------------
 
     /// @notice Create a new election. Returns the new election id (also `electionCount - 1`).
-    function createElection(string calldata name, string calldata description)
+    function createElection(
+        string calldata name,
+        string calldata description,
+        string calldata thumbnailUrl
+    )
         external
         onlyRole(ADMIN_ROLE)
         returns (uint256 electionId)
@@ -130,11 +135,12 @@ contract Election is AccessControl {
         if (bytes(name).length == 0) revert EmptyName();
         electionId = electionCount++;
         ElectionData storage e = _elections[electionId];
-        e.id          = electionId;
-        e.name        = name;
-        e.description = description;
-        e.creator     = msg.sender;
-        e.state       = State.NotStarted;
+        e.id           = electionId;
+        e.name         = name;
+        e.description  = description;
+        e.thumbnailUrl = thumbnailUrl;
+        e.creator      = msg.sender;
+        e.state        = State.NotStarted;
         emit ElectionCreated(electionId, msg.sender, name);
     }
 
@@ -156,14 +162,20 @@ contract Election is AccessControl {
         emit CandidateAdded(electionId, candidateId, name);
     }
 
-    function updateElection(uint256 electionId, string calldata name, string calldata description)
+    function updateElection(
+        uint256 electionId,
+        string calldata name,
+        string calldata description,
+        string calldata thumbnailUrl
+    )
         external onlyRole(ADMIN_ROLE)
     {
         if (bytes(name).length == 0) revert EmptyName();
         ElectionData storage e = _election(electionId);
         if (e.deleted) revert ElectionNotFound();
-        e.name        = name;
-        e.description = description;
+        e.name         = name;
+        e.description  = description;
+        e.thumbnailUrl = thumbnailUrl;
         emit ElectionUpdated(electionId, name, description);
     }
 
@@ -267,6 +279,7 @@ contract Election is AccessControl {
             uint256 id,
             string memory name,
             string memory description,
+            string memory thumbnailUrl,
             address creator,
             State state,
             uint256 candidateCount,
@@ -275,7 +288,17 @@ contract Election is AccessControl {
         )
     {
         ElectionData storage e = _election(electionId);
-        return (e.id, e.name, e.description, e.creator, e.state, e.candidateCount, e.totalVotes, e.deleted);
+        return (
+            e.id,
+            e.name,
+            e.description,
+            e.thumbnailUrl,
+            e.creator,
+            e.state,
+            e.candidateCount,
+            e.totalVotes,
+            e.deleted
+        );
     }
 
     function getCandidate(uint256 electionId, uint256 candidateId)
