@@ -196,10 +196,11 @@ function ElectionsTab({
   const [ending, setEnding]         = useState(null);
 
   // Edit election
-  const [editId, setEditId]         = useState(null);
-  const [editName, setEditName]     = useState('');
-  const [editDesc, setEditDesc]     = useState('');
-  const [updating, setUpdating]     = useState(null);
+  const [editId, setEditId]            = useState(null);
+  const [editName, setEditName]        = useState('');
+  const [editDesc, setEditDesc]        = useState('');
+  const [editThumbUrl, setEditThumbUrl] = useState('');
+  const [updating, setUpdating]        = useState(null);
 
   // Delete election
   const [deleting, setDeleting]     = useState(null);
@@ -223,6 +224,7 @@ function ElectionsTab({
     setEditId(e.id);
     setEditName(e.name);
     setEditDesc(e.description);
+    setEditThumbUrl(e.thumbnailUrl ?? '');
     setAddCandFor(null);
   }
 
@@ -264,11 +266,18 @@ function ElectionsTab({
     if (!editName.trim()) return;
     setUpdating(electionId);
     try {
-      const tx = await election.updateElection(electionId, editName.trim(), editDesc.trim());
+      const tx = await election.updateElection(
+        electionId,
+        editName.trim(),
+        editDesc.trim(),
+        editThumbUrl.trim()
+      );
       setPendingTx({ label: 'Updating election…', hash: tx.hash });
       await tx.wait();
       setElections(prev => prev.map(e =>
-        e.id === electionId ? { ...e, name: editName.trim(), description: editDesc.trim() } : e
+        e.id === electionId
+          ? { ...e, name: editName.trim(), description: editDesc.trim(), thumbnailUrl: editThumbUrl.trim() }
+          : e
       ));
       pushToast('Election updated', 'success');
       setEditId(null);
@@ -508,6 +517,12 @@ function ElectionsTab({
                     <input className="input" value={editDesc}
                       onChange={ev => setEditDesc(ev.target.value)} />
                   </div>
+                </div>
+                <div className="field" style={{ marginTop: 12 }}>
+                  <label>Thumbnail URL</label>
+                  <input className="input" value={editThumbUrl}
+                    onChange={ev => setEditThumbUrl(ev.target.value)}
+                    placeholder="https://… (optional)" />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
                   <button className="btn btn-sm" onClick={() => setEditId(null)}>Cancel</button>
