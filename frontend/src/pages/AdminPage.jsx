@@ -44,6 +44,7 @@ export default function AdminPage({ pushToast, setPendingTx }) {
         id:             Number(e.id),
         name:           e.name,
         description:    e.description,
+        thumbnailUrl:   e.thumbnailUrl,
         creator:        e.creator,
         state:          stateLabel(e.state),
         candidateCount: Number(e.candidateCount),
@@ -178,6 +179,7 @@ function ElectionsTab({
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName]             = useState('');
   const [desc, setDesc]             = useState('');
+  const [thumbUrl, setThumbUrl]     = useState('');
   const [creating, setCreating]     = useState(false);
 
   // Add candidate
@@ -243,16 +245,17 @@ function ElectionsTab({
     if (!name.trim()) return;
     setCreating(true);
     try {
-      const tx = await election.createElection(name.trim(), desc.trim());
+      const tx = await election.createElection(name.trim(), desc.trim(), thumbUrl.trim());
       setPendingTx({ label: `Creating "${name.trim()}"…`, hash: tx.hash });
       await tx.wait();
       setElections(prev => [...prev, {
         id: prev.length,
         name: name.trim(), description: desc.trim(),
+        thumbnailUrl: thumbUrl.trim(),
         state: 'NotStarted', candidateCount: 0,
       }]);
       pushToast('Election created', 'success');
-      setName(''); setDesc(''); setShowCreate(false);
+      setName(''); setDesc(''); setThumbUrl(''); setShowCreate(false);
     } catch (e) { pushToast(e.reason ?? e.message, 'error'); }
     finally { setCreating(false); setPendingTx(null); }
   }
@@ -418,6 +421,11 @@ function ElectionsTab({
               <input className="input" value={desc} onChange={e => setDesc(e.target.value)}
                 placeholder="Short description" />
             </div>
+          </div>
+          <div className="field" style={{ marginTop: 12 }}>
+            <label>Thumbnail URL</label>
+            <input className="input" value={thumbUrl} onChange={e => setThumbUrl(e.target.value)}
+              placeholder="https://… (optional)" />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
             <button className="btn" onClick={() => setShowCreate(false)}>Cancel</button>
