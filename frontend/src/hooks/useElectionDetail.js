@@ -38,6 +38,7 @@ export function useElectionDetail(id) {
         id: Number(e.id),
         name: e.name,
         description: e.description,
+        thumbnailUrl: e.thumbnailUrl,
         state: Number(e.state),
         candidateCount: Number(e.candidateCount),
         totalVotes: Number(e.totalVotes),
