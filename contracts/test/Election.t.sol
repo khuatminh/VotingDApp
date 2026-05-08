@@ -123,6 +123,42 @@ contract ElectionTest is Test {
         assertEq(election.electionCount(), 2);
     }
 
+    function test_createElection_persistsThumbnailUrl() public {
+        vm.prank(admin);
+        election.createElection("E", "desc", "https://example.com/thumb.png");
+
+        (
+            ,
+            ,
+            ,
+            string memory thumb,
+            ,
+            ,
+            ,
+            ,
+        ) = election.getElection(0);
+        assertEq(thumb, "https://example.com/thumb.png");
+    }
+
+    function test_updateElection_changesThumbnailUrl() public {
+        vm.startPrank(admin);
+        election.createElection("E", "desc", "old.png");
+        election.updateElection(0, "E", "desc", "new.png");
+        vm.stopPrank();
+
+        (
+            ,
+            ,
+            ,
+            string memory thumb,
+            ,
+            ,
+            ,
+            ,
+        ) = election.getElection(0);
+        assertEq(thumb, "new.png");
+    }
+
     // ----- addCandidate --------------------------------------------------
 
     function test_addCandidate_happyPath() public {
