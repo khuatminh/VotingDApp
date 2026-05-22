@@ -133,6 +133,7 @@ cp frontend/.env.example  frontend/.env
 |---|---|---|
 | `VITE_DEFAULT_CHAIN_ID` | `31337` | `31337` = Anvil, `11155111` = Sepolia. |
 | `VITE_SEPOLIA_RPC` | empty | Optional explicit Sepolia RPC; otherwise the app uses MetaMask's provider. |
+| `VITE_PINATA_JWT` | empty | Required for admins to upload election/candidate images. Create a JWT with only `pinFileToIPFS` scope at https://app.pinata.cloud/developers/api-keys. **Inlined into the frontend bundle** — treat as public; for production use a backend proxy instead. |
 
 **For local demo, the defaults are fine — leave both files as the templates dictate.**
 
