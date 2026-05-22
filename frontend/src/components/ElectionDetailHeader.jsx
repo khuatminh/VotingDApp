@@ -1,4 +1,5 @@
 import React from 'react';
+import { ipfsToHttp } from '../lib/ipfs.js';
 
 const STATE_LABELS = { 0: 'NotStarted', 1: 'Open', 2: 'Ended' };
 
@@ -32,7 +33,7 @@ function CandidateAvatar({ candidate, size = 24 }) {
   if (candidate.imageUrl && !err) {
     return (
       <img
-        src={candidate.imageUrl}
+        src={ipfsToHttp(candidate.imageUrl)}
         alt={candidate.name}
         onError={() => setErr(true)}
         style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover' }}

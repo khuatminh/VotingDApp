@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { ipfsToHttp } from '../lib/ipfs.js';
 
 const AVATAR_COLORS = ['#7c5cff', '#ff5cf2', '#3d9fef', '#c2ff3d', '#ff9f3d'];
 
@@ -26,7 +27,7 @@ export default function CandidateDetailModal({
         <button className="modal__close" type="button" onClick={onClose} aria-label="Đóng">×</button>
         <div className="modal__head">
           {candidate.imageUrl ? (
-            <img src={candidate.imageUrl} alt={candidate.name} className="modal__avatar" />
+            <img src={ipfsToHttp(candidate.imageUrl)} alt={candidate.name} className="modal__avatar" />
           ) : (
             <div className="modal__avatar modal__avatar--fallback" style={{ background: color }}>👤</div>
           )}
