@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useContract } from '../hooks/useContract.js';
+import ImageUploader from '../components/ImageUploader.jsx';
 
 const STATE_LABELS = ['NotStarted', 'Open', 'Ended'];
 function stateLabel(s) { return STATE_LABELS[Number(s)] ?? 'NotStarted'; }
@@ -247,13 +248,13 @@ function ElectionsTab({
     if (!name.trim()) return;
     setCreating(true);
     try {
-      const tx = await election.createElection(name.trim(), desc.trim(), thumbUrl.trim());
+      const tx = await election.createElection(name.trim(), desc.trim(), thumbUrl);
       setPendingTx({ label: `Creating "${name.trim()}"…`, hash: tx.hash });
       await tx.wait();
       setElections(prev => [...prev, {
         id: prev.length,
         name: name.trim(), description: desc.trim(),
-        thumbnailUrl: thumbUrl.trim(),
+        thumbnailUrl: thumbUrl,
         state: 'NotStarted', candidateCount: 0,
       }]);
       pushToast('Election created', 'success');
@@ -270,13 +271,13 @@ function ElectionsTab({
         electionId,
         editName.trim(),
         editDesc.trim(),
-        editThumbUrl.trim()
+        editThumbUrl
       );
       setPendingTx({ label: 'Updating election…', hash: tx.hash });
       await tx.wait();
       setElections(prev => prev.map(e =>
         e.id === electionId
-          ? { ...e, name: editName.trim(), description: editDesc.trim(), thumbnailUrl: editThumbUrl.trim() }
+          ? { ...e, name: editName.trim(), description: editDesc.trim(), thumbnailUrl: editThumbUrl }
           : e
       ));
       pushToast('Election updated', 'success');
@@ -308,7 +309,7 @@ function ElectionsTab({
         cSlogan.trim(),
         cDesc.trim(),
         cBio.trim(),
-        cImg.trim()
+        cImg
       );
       setPendingTx({ label: `Adding "${cName.trim()}"…`, hash: tx.hash });
       await tx.wait();
@@ -323,7 +324,7 @@ function ElectionsTab({
           slogan: cSlogan.trim(),
           description: cDesc.trim(),
           bio: cBio.trim(),
-          imageUrl: cImg.trim(),
+          imageUrl: cImg,
           voteCount: 0,
         };
         return { ...prev, [electionId]: [...prev[electionId], newCand] };
@@ -342,7 +343,7 @@ function ElectionsTab({
     try {
       const tx = await election.updateCandidate(
         electionId, candidateId,
-        ecName.trim(), ecSlogan.trim(), ecDesc.trim(), ecBio.trim(), ecImg.trim()
+        ecName.trim(), ecSlogan.trim(), ecDesc.trim(), ecBio.trim(), ecImg
       );
       setPendingTx({ label: 'Updating candidate…', hash: tx.hash });
       await tx.wait();
@@ -356,7 +357,7 @@ function ElectionsTab({
                 slogan: ecSlogan.trim(),
                 description: ecDesc.trim(),
                 bio: ecBio.trim(),
-                imageUrl: ecImg.trim(),
+                imageUrl: ecImg,
               }
             : c
         ),
@@ -432,9 +433,7 @@ function ElectionsTab({
             </div>
           </div>
           <div className="field" style={{ marginTop: 12 }}>
-            <label>Thumbnail URL</label>
-            <input className="input" value={thumbUrl} onChange={e => setThumbUrl(e.target.value)}
-              placeholder="https://… (optional)" />
+            <ImageUploader label="Thumbnail" value={thumbUrl} onChange={setThumbUrl} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
             <button className="btn" onClick={() => setShowCreate(false)}>Cancel</button>
@@ -519,10 +518,7 @@ function ElectionsTab({
                   </div>
                 </div>
                 <div className="field" style={{ marginTop: 12 }}>
-                  <label>Thumbnail URL</label>
-                  <input className="input" value={editThumbUrl}
-                    onChange={ev => setEditThumbUrl(ev.target.value)}
-                    placeholder="https://… (optional)" />
+                  <ImageUploader label="Thumbnail" value={editThumbUrl} onChange={setEditThumbUrl} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
                   <button className="btn btn-sm" onClick={() => setEditId(null)}>Cancel</button>
@@ -558,9 +554,7 @@ function ElectionsTab({
                       placeholder="Short summary" />
                   </div>
                   <div className="field">
-                    <label>Image URL</label>
-                    <input className="input" value={cImg} onChange={ev => setCImg(ev.target.value)}
-                      placeholder="https://…" />
+                    <ImageUploader label="Image" value={cImg} onChange={setCImg} />
                   </div>
                 </div>
                 <div className="field" style={{ marginTop: 12 }}>
@@ -647,10 +641,7 @@ function ElectionsTab({
                                   onChange={ev => setEcDesc(ev.target.value)} />
                               </div>
                               <div className="field">
-                                <label>Image URL</label>
-                                <input className="input" value={ecImg}
-                                  onChange={ev => setEcImg(ev.target.value)}
-                                  placeholder="https://…" />
+                                <ImageUploader label="Image" value={ecImg} onChange={setEcImg} />
                               </div>
                             </div>
                             <div className="field" style={{ marginTop: 12 }}>

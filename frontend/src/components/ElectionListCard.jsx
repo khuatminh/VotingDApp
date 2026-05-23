@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ipfsToHttp } from '../lib/ipfs.js';
 
 const STATE_LABELS = { 0: 'NotStarted', 1: 'Open', 2: 'Ended' };
 const PALETTE = ['#7c5cff', '#ff5cf2', '#3d9fef', '#c2ff3d', '#ff9f3d'];
@@ -39,7 +40,7 @@ export default function ElectionListCard({ election }) {
       <div className="election-card__thumb">
         {showImg ? (
           <img
-            src={thumbnailUrl}
+            src={ipfsToHttp(thumbnailUrl)}
             alt={name}
             loading="lazy"
             onError={() => setImgError(true)}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ipfsToHttp } from '../lib/ipfs.js';
 
 const AVATAR_COLORS = ['#7c5cff', '#ff5cf2', '#3d9fef', '#c2ff3d', '#ff9f3d'];
 
@@ -22,7 +23,7 @@ export default function CandidateGridCard({
     >
       {showImg ? (
         <img
-          src={candidate.imageUrl}
+          src={ipfsToHttp(candidate.imageUrl)}
           alt={candidate.name}
           onError={() => setImgError(true)}
           className="candidate-card__avatar"

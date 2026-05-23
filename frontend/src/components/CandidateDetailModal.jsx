@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { ipfsToHttp } from '../lib/ipfs.js';
 
 const AVATAR_COLORS = ['#7c5cff', '#ff5cf2', '#3d9fef', '#c2ff3d', '#ff9f3d'];
 
 export default function CandidateDetailModal({
   candidate, voted, disabled, onVote, onClose,
 }) {
+  const [imgError, setImgError] = useState(false);
   useEffect(() => {
     if (!candidate) return;
     function onKey(e) { if (e.key === 'Escape') onClose?.(); }
@@ -14,6 +16,7 @@ export default function CandidateDetailModal({
 
   if (!candidate) return null;
   const color = AVATAR_COLORS[Number(candidate.id) % AVATAR_COLORS.length];
+  const showImg = candidate.imageUrl && !imgError;
 
   function handleVote() {
     onVote?.(candidate.id);
@@ -25,8 +28,13 @@ export default function CandidateDetailModal({
       <div className="modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
         <button className="modal__close" type="button" onClick={onClose} aria-label="Đóng">×</button>
         <div className="modal__head">
-          {candidate.imageUrl ? (
-            <img src={candidate.imageUrl} alt={candidate.name} className="modal__avatar" />
+          {showImg ? (
+            <img
+              src={ipfsToHttp(candidate.imageUrl)}
+              alt={candidate.name}
+              onError={() => setImgError(true)}
+              className="modal__avatar"
+            />
           ) : (
             <div className="modal__avatar modal__avatar--fallback" style={{ background: color }}>👤</div>
           )}
