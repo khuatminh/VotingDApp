@@ -1,5 +1,3 @@
-# ABI JSON files are auto-synced from contracts/out by scripts/sync-abi.sh.
-# Only addresses.json is committed.
-*.json
-!addresses.json
-!.gitignore
+# ABI JSON files are auto-synced from contracts/out by scripts/sync-abi.sh
+# and committed so hosted builds (Vercel etc.) can resolve them without forge.
+# Re-run sync-abi.sh after each contract change and commit the updated ABIs.

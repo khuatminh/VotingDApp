@@ -20,9 +20,8 @@ node_modules/
 **/broadcast/
 !contracts/broadcast/.gitkeep
 
-# Frontend ABIs are auto-synced; only addresses.json is committed
-frontend/src/contracts/*.json
-!frontend/src/contracts/addresses.json
+# Frontend ABIs are auto-synced by scripts/sync-abi.sh and committed so
+# hosted builds (Vercel etc.) can resolve them without forge.
 
 # Superpowers ephemeral state (brainstorm mockups, agent state)
 .superpowers/
