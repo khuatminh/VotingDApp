@@ -11,7 +11,7 @@ export default function ConnectButton() {
     try {
       await connect();
     } catch {
-      setError('MetaMask not found or rejected');
+      setError('Không tìm thấy MetaMask hoặc bị từ chối');
     }
   }
 
@@ -27,7 +27,7 @@ export default function ConnectButton() {
   return (
     <div>
       <button className="btn btn-primary btn-sm" onClick={handleConnect}>
-        Connect
+        Kết nối ví
       </button>
       {error && (
         <div style={{ fontSize: 11, color: 'var(--bad)', marginTop: 4, textAlign: 'right' }}>

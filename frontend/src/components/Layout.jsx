@@ -33,10 +33,10 @@ export default function Layout() {
         <div className="top-inner container">
           <BrandMark />
           <nav className="top-nav">
-            <NavLink to="/vote"    className={({ isActive }) => isActive ? 'active' : ''}>Vote</NavLink>
-            <NavLink to="/results" className={({ isActive }) => isActive ? 'active' : ''}>Results</NavLink>
+            <NavLink to="/vote"    className={({ isActive }) => isActive ? 'active' : ''}>Bỏ phiếu</NavLink>
+            <NavLink to="/results" className={({ isActive }) => isActive ? 'active' : ''}>Kết quả</NavLink>
             {isAdmin && (
-              <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''}>Admin</NavLink>
+              <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''}>Quản trị</NavLink>
             )}
           </nav>
           <div className="top-right">

@@ -50,7 +50,7 @@ export default function ElectionDetailPage({ pushToast, setPendingTx }) {
   if (!isConnected) {
     return (
       <div className="container admin-page">
-        <Link to="/vote" className="back-link">← Back to elections</Link>
+        <Link to="/vote" className="back-link">← Quay lại danh sách bầu cử</Link>
         <p style={{ color: 'var(--ink-3)', marginTop: 32 }}>
           Kết nối ví để tham gia bỏ phiếu.
         </p>
@@ -61,7 +61,7 @@ export default function ElectionDetailPage({ pushToast, setPendingTx }) {
   if (loading) {
     return (
       <div className="container admin-page">
-        <Link to="/vote" className="back-link">← Back to elections</Link>
+        <Link to="/vote" className="back-link">← Quay lại danh sách bầu cử</Link>
         <p style={{ color: 'var(--ink-3)', marginTop: 16 }}>Đang tải…</p>
       </div>
     );
@@ -70,9 +70,9 @@ export default function ElectionDetailPage({ pushToast, setPendingTx }) {
   if (error || !election) {
     return (
       <div className="container admin-page">
-        <Link to="/vote" className="back-link">← Back to elections</Link>
+        <Link to="/vote" className="back-link">← Quay lại danh sách bầu cử</Link>
         <p style={{ color: '#f55', marginTop: 16 }}>
-          {error || 'Election not found.'}
+          {error || 'Không tìm thấy cuộc bầu cử.'}
         </p>
         <button className="btn btn-sm" type="button" onClick={reload}>
           Thử lại
@@ -92,7 +92,7 @@ export default function ElectionDetailPage({ pushToast, setPendingTx }) {
 
   return (
     <div className="container admin-page">
-      <Link to="/vote" className="back-link">← Back to elections</Link>
+      <Link to="/vote" className="back-link">← Quay lại danh sách bầu cử</Link>
 
       <ElectionDetailHeader
         election={election}

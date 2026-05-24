@@ -156,7 +156,7 @@ export default function ResultsPage() {
 
   return (
     <div className="container admin-page">
-      <h2 style={{ marginBottom: 16 }}>Kết quả bầu cử</h2>
+      <h2 style={{ marginBottom: 16 }}>Kết quả các cuộc bầu cử</h2>
       <div style={{ marginBottom: 16 }}>
         <ElectionSelector
           elections={elections}

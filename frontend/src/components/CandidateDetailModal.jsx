@@ -44,7 +44,7 @@ export default function CandidateDetailModal({
               <div className="modal__slogan">"{candidate.slogan}"</div>
             )}
             <div className="modal__count">
-              {candidate.voteCount} vote{candidate.voteCount !== 1 ? 's' : ''} so far
+              Đã nhận {candidate.voteCount} phiếu
             </div>
           </div>
         </div>

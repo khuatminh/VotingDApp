@@ -6,9 +6,9 @@ import ElectionListCard from '../components/ElectionListCard';
 const NOT_STARTED = 0, OPEN = 1, ENDED = 2;
 
 const CHIP_DEFS = [
-  { value: OPEN,        label: 'Open' },
-  { value: NOT_STARTED, label: 'Not started' },
-  { value: ENDED,       label: 'Ended' },
+  { value: OPEN,        label: 'Đang mở' },
+  { value: NOT_STARTED, label: 'Chưa bắt đầu' },
+  { value: ENDED,       label: 'Đã kết thúc' },
 ];
 
 export default function ElectionListPage() {

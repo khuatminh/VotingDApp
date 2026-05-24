@@ -1,7 +1,7 @@
 // frontend/src/components/ElectionSelector.jsx
 import React from 'react'
 
-const STATE_LABELS = { 0: 'NotStarted', 1: 'Open', 2: 'Ended' }
+const STATE_LABELS = { 0: 'Chưa bắt đầu', 1: 'Đang mở', 2: 'Đã kết thúc' }
 
 export default function ElectionSelector({ elections, selected, onSelect, loading }) {
   if (loading) {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ipfsToHttp } from '../lib/ipfs.js';
 
-const STATE_LABELS = { 0: 'NotStarted', 1: 'Open', 2: 'Ended' };
+const STATE_LABELS = { 0: 'Chưa bắt đầu', 1: 'Đang mở', 2: 'Đã kết thúc' };
 const PALETTE = ['#7c5cff', '#ff5cf2', '#3d9fef', '#c2ff3d', '#ff9f3d'];
 
 function gradientFor(id) {
@@ -12,14 +12,14 @@ function gradientFor(id) {
 }
 
 function StateBadge({ state }) {
-  const label = STATE_LABELS[state] ?? 'NotStarted';
+  const label = STATE_LABELS[state] ?? 'Chưa bắt đầu';
   const cls =
     state === 1 ? 'badge-open' :
     state === 2 ? 'badge-ended' : 'badge-notstarted';
   return (
     <span className={`badge ${cls}`}>
       <span className="dot"></span>
-      {label === 'NotStarted' ? 'Not started' : label}
+      {label}
     </span>
   );
 }
@@ -61,15 +61,15 @@ export default function ElectionListCard({ election }) {
           <p className="election-card__desc">{description}</p>
         )}
         <div className="election-card__meta">
-          📊 {totalVotes} vote{totalVotes !== 1 ? 's' : ''} ·{' '}
-          👥 {candidateCount} candidate{candidateCount !== 1 ? 's' : ''}
+          📊 {totalVotes} phiếu ·{' '}
+          👥 {candidateCount} ứng viên
         </div>
         {state === 2 && (
           <Link
             to="/results"
             style={{ color: 'var(--accent)', fontSize: 12, textDecoration: 'none' }}
           >
-            View results →
+            Xem kết quả →
           </Link>
         )}
       </div>

@@ -1,17 +1,17 @@
 import React from 'react';
 import { ipfsToHttp } from '../lib/ipfs.js';
 
-const STATE_LABELS = { 0: 'NotStarted', 1: 'Open', 2: 'Ended' };
+const STATE_LABELS = { 0: 'Chưa bắt đầu', 1: 'Đang mở', 2: 'Đã kết thúc' };
 
 function StateBadge({ state }) {
-  const label = STATE_LABELS[state] ?? 'NotStarted';
+  const label = STATE_LABELS[state] ?? 'Chưa bắt đầu';
   const cls =
     state === 1 ? 'badge-open' :
     state === 2 ? 'badge-ended' : 'badge-notstarted';
   return (
     <span className={`badge ${cls}`}>
       <span className="dot"></span>
-      {label === 'NotStarted' ? 'Not started' : label}
+      {label}
     </span>
   );
 }
@@ -66,7 +66,7 @@ export default function ElectionDetailHeader({
     ? '—'
     : isAuthorized === null
       ? '…'
-      : isAuthorized ? '✓ OK' : '✗ Not authorized';
+      : isAuthorized ? '✓ Đã cấp quyền' : '✗ Chưa cấp quyền';
 
   const sortedForBars = [...candidates].sort((a, b) => b.voteCount - a.voteCount);
 
@@ -81,11 +81,11 @@ export default function ElectionDetailHeader({
       )}
 
       <div className="stat-row">
-        <StatTile label="Total votes" value={election.totalVotes} />
-        <StatTile label="Candidates"  value={election.candidateCount} />
-        <StatTile label="Your vote"
-          value={votedCandidate ? '✓ Voted' : (walletConnected ? 'Not yet' : '—')} />
-        <StatTile label="Auth status" value={authStatus} />
+        <StatTile label="Tổng phiếu" value={election.totalVotes} />
+        <StatTile label="Ứng viên"   value={election.candidateCount} />
+        <StatTile label="Phiếu của bạn"
+          value={votedCandidate ? '✓ Đã bỏ phiếu' : (walletConnected ? 'Chưa bỏ' : '—')} />
+        <StatTile label="Trạng thái quyền" value={authStatus} />
       </div>
 
       {votedCandidate && (
@@ -94,16 +94,16 @@ export default function ElectionDetailHeader({
           onClick={() => onVotedClick?.(votedCandidate.id)}
           style={{ cursor: onVotedClick ? 'pointer' : 'default' }}
         >
-          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>Your vote:</span>
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>Phiếu của bạn:</span>
           <CandidateAvatar candidate={votedCandidate} size={28} />
           <span>{votedCandidate.name}</span>
         </div>
       )}
 
       <div style={{ marginTop: 16 }}>
-        <div className="eyebrow mb-12">Live distribution</div>
+        <div className="eyebrow mb-12">Phân bố phiếu (trực tiếp)</div>
         {election.totalVotes === 0 ? (
-          <p style={{ color: 'var(--ink-3)', fontSize: 13 }}>No votes yet</p>
+          <p style={{ color: 'var(--ink-3)', fontSize: 13 }}>Chưa có phiếu nào</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {sortedForBars.map(c => {
